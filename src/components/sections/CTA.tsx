@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/lib/language-context";
+import Link from "next/link";
 
 export function CTA() {
   const { t } = useLanguage();
@@ -33,12 +34,16 @@ export function CTA() {
             )}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" className="h-14 px-8 text-base bg-white text-green-700 hover:bg-gray-50 shadow-lg shadow-black/10 font-semibold">
-              {t("Daftarkan Brand", "Register Brand")}
-            </Button>
-            <Button size="lg" variant="outline" className="h-14 px-8 text-base bg-transparent border-white/30 text-white hover:bg-white/10 hover:text-white font-semibold">
-              {t("Gabung Sebagai Investor", "Join as Investor")}
-            </Button>
+            <Link href="/register-brand">
+              <Button size="lg" className="h-14 px-8 text-base bg-white text-green-700 hover:bg-gray-50 shadow-lg shadow-black/10 font-semibold">
+                {t("Daftarkan Brand", "Register Brand")}
+              </Button>
+            </Link>
+            <Link href="/login">
+              <Button size="lg" variant="outline" className="h-14 px-8 text-base bg-transparent border-white/30 text-white hover:bg-white/10 hover:text-white font-semibold">
+                {t("Gabung Sebagai Investor", "Join as Investor")}
+              </Button>
+            </Link>
           </div>
         </motion.div>
       </div>

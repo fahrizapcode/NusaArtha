@@ -44,10 +44,12 @@ export function Hero() {
 
 
             <div className="flex flex-col sm:flex-row gap-4 mt-2">
-              <Button size="lg" className="h-14 px-8 text-base shadow-lg shadow-green-600/20">
-                {t("Daftarkan Brand", "Register Brand")}
-              </Button>
-              <Link href="/investor/login">
+              <Link href="/register-brand">
+                <Button size="lg" className="h-14 px-8 text-base shadow-lg shadow-green-600/20">
+                  {t("Daftarkan Brand", "Register Brand")}
+                </Button>
+              </Link>
+              <Link href="/investor/dashboard/marketplace">
                 <Button size="lg" variant="outline" className="h-14 px-8 text-base">
                   {t("Jelajahi Marketplace", "Explore Marketplace")}
                   <ArrowRight className="ml-2 h-4 w-4" />

@@ -2,6 +2,7 @@
 
 import { Mail, Phone, Globe, MapPin } from "lucide-react";
 import { useLanguage } from "@/lib/language-context";
+import Link from "next/link";
 
 export function Footer() {
   const { t } = useLanguage();
@@ -25,13 +26,13 @@ export function Footer() {
               <a href="#" className="text-gray-400 hover:text-green-600 transition-colors">
                 <Globe className="w-5 h-5" />
               </a>
-              <a href="#" className="text-gray-400 hover:text-green-600 transition-colors">
+              <a href="mailto:hello@nusaartha.id" className="text-gray-400 hover:text-green-600 transition-colors">
                 <Mail className="w-5 h-5" />
               </a>
-              <a href="#" className="text-gray-400 hover:text-green-600 transition-colors">
+              <a href="tel:+6221000000" className="text-gray-400 hover:text-green-600 transition-colors">
                 <Phone className="w-5 h-5" />
               </a>
-              <a href="#" className="text-gray-400 hover:text-green-600 transition-colors">
+              <a href="#tentang" className="text-gray-400 hover:text-green-600 transition-colors">
                 <MapPin className="w-5 h-5" />
               </a>
             </div>
@@ -40,7 +41,7 @@ export function Footer() {
           <div>
             <h4 className="font-semibold text-gray-950 mb-4">{t("Perusahaan", "Company")}</h4>
             <ul className="space-y-3">
-              <li><a href="#" className="text-gray-500 hover:text-green-600 transition-colors">{t("Tentang Kami", "About Us")}</a></li>
+              <li><a href="#tentang" className="text-gray-500 hover:text-green-600 transition-colors">{t("Tentang Kami", "About Us")}</a></li>
               <li><a href="#" className="text-gray-500 hover:text-green-600 transition-colors">{t("Karir", "Careers")}</a></li>
               <li><a href="#" className="text-gray-500 hover:text-green-600 transition-colors">Blog</a></li>
               <li><a href="#" className="text-gray-500 hover:text-green-600 transition-colors">Press Kit</a></li>
@@ -50,10 +51,26 @@ export function Footer() {
           <div>
             <h4 className="font-semibold text-gray-950 mb-4">{t("Platform", "Platform")}</h4>
             <ul className="space-y-3">
-              <li><a href="#" className="text-gray-500 hover:text-green-600 transition-colors">Marketplace</a></li>
-              <li><a href="#" className="text-gray-500 hover:text-green-600 transition-colors">Brand Owner</a></li>
-              <li><a href="#" className="text-gray-500 hover:text-green-600 transition-colors">Investor</a></li>
-              <li><a href="#" className="text-gray-500 hover:text-green-600 transition-colors">Operator</a></li>
+              <li>
+                <Link href="/investor/dashboard/marketplace" className="text-gray-500 hover:text-green-600 transition-colors">
+                  Marketplace
+                </Link>
+              </li>
+              <li>
+                <Link href="/register-brand" className="text-gray-500 hover:text-green-600 transition-colors">
+                  Brand Owner
+                </Link>
+              </li>
+              <li>
+                <Link href="/login" className="text-gray-500 hover:text-green-600 transition-colors">
+                  Investor
+                </Link>
+              </li>
+              <li>
+                <Link href="/login" className="text-gray-500 hover:text-green-600 transition-colors">
+                  Operator
+                </Link>
+              </li>
             </ul>
           </div>
 
@@ -63,7 +80,7 @@ export function Footer() {
               <li><a href="#" className="text-gray-500 hover:text-green-600 transition-colors">{t("Syarat & Ketentuan", "Terms & Conditions")}</a></li>
               <li><a href="#" className="text-gray-500 hover:text-green-600 transition-colors">{t("Kebijakan Privasi", "Privacy Policy")}</a></li>
               <li><a href="#" className="text-gray-500 hover:text-green-600 transition-colors">{t("Peringatan Risiko", "Risk Disclaimer")}</a></li>
-              <li><a href="#" className="text-gray-500 hover:text-green-600 transition-colors">{t("Kontak", "Contact")}</a></li>
+              <li><a href="mailto:hello@nusaartha.id" className="text-gray-500 hover:text-green-600 transition-colors">{t("Kontak", "Contact")}</a></li>
             </ul>
           </div>
 

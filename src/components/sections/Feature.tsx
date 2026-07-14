@@ -1,9 +1,10 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { CheckCircle2, ShieldAlert, Store, Activity, Link, LayoutDashboard } from "lucide-react";
+import { CheckCircle2, ShieldAlert, Store, Activity, Link as LinkIcon, LayoutDashboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/lib/language-context";
+import Link from "next/link";
 
 export function Feature() {
   const { t } = useLanguage();
@@ -16,6 +17,7 @@ export function Feature() {
         "Evaluasi berbasis data untuk menilai kelayakan ekspansi suatu brand berdasarkan historis penjualan dan operasional.",
         "Data-driven evaluation to assess a brand's expansion feasibility based on sales history and operations."
       ),
+      href: "/register-brand",
     },
     {
       icon: <ShieldAlert className="w-6 h-6" />,
@@ -24,6 +26,7 @@ export function Feature() {
         "Pemeriksaan menyeluruh terhadap aspek legalitas, kelayakan lokasi, dan proyeksi finansial outlet baru.",
         "Comprehensive review of legal aspects, location feasibility, and financial projections for new outlets."
       ),
+      href: "/register-brand",
     },
     {
       icon: <Store className="w-6 h-6" />,
@@ -32,6 +35,7 @@ export function Feature() {
         "Platform untuk mempertemukan brand yang butuh pendanaan dengan investor ritel maupun institusi.",
         "A platform connecting brands that need funding with retail and institutional investors."
       ),
+      href: "/investor/dashboard/marketplace",
     },
     {
       icon: <Activity className="w-6 h-6" />,
@@ -40,6 +44,7 @@ export function Feature() {
         "Sistem kasir cerdas yang secara otomatis mencatat dan melaporkan setiap transaksi ke dalam ekosistem.",
         "Smart POS system that automatically records and reports every transaction within the ecosystem."
       ),
+      href: "#cara-kerja",
     },
     {
       icon: <LayoutDashboard className="w-6 h-6" />,
@@ -48,14 +53,16 @@ export function Feature() {
         "Dashboard monitoring untuk mengevaluasi kinerja tim operasional harian di masing-masing cabang.",
         "Monitoring dashboard to evaluate daily operational team performance at each branch."
       ),
+      href: "/login",
     },
     {
-      icon: <Link className="w-6 h-6" />,
+      icon: <LinkIcon className="w-6 h-6" />,
       title: "Blockchain Transparency",
       description: t(
         "Pencatatan distribusi dana dan pembagian hasil yang terekam secara immutable pada jaringan blockchain.",
         "Fund distribution and profit sharing recorded immutably on the blockchain network."
       ),
+      href: "#tentang",
     },
   ];
 
@@ -91,9 +98,11 @@ export function Feature() {
               <p className="text-gray-500 text-sm leading-relaxed mb-6 flex-1">
                 {feature.description}
               </p>
-              <Button variant="ghost" className="w-fit p-0 hover:bg-transparent text-green-600 hover:text-green-700 font-semibold h-auto">
-                {t("Pelajari selengkapnya", "Learn more")} &rarr;
-              </Button>
+              <Link href={feature.href}>
+                <Button variant="ghost" className="w-fit p-0 hover:bg-transparent text-green-600 hover:text-green-700 font-semibold h-auto">
+                  {t("Pelajari selengkapnya", "Learn more")} &rarr;
+                </Button>
+              </Link>
             </motion.div>
           ))}
         </div>

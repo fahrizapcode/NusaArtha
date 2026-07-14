@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Store, Server, LineChart, Briefcase } from "lucide-react";
 import { useLanguage } from "@/lib/language-context";
+import Link from "next/link";
 
 export function HowItWorks() {
   const { t } = useLanguage();
@@ -17,6 +18,8 @@ export function HowItWorks() {
         "Focus on product innovation and quality standards, while expanding your business without worrying about capex and daily operations of new outlets."
       ),
       color: "bg-green-50 border-green-100",
+      href: "/register-brand",
+      cta: t("Daftarkan Brand", "Register Brand"),
     },
     {
       icon: <Server className="w-8 h-8 text-blue-600" />,
@@ -26,6 +29,8 @@ export function HowItWorks() {
         "Provides digital infrastructure, smart contracts, integrated POS, and auto-distribution system to maintain trust between all parties."
       ),
       color: "bg-blue-50 border-blue-100",
+      href: "#cara-kerja",
+      cta: t("Pelajari", "Learn More"),
     },
     {
       icon: <LineChart className="w-8 h-8 text-purple-600" />,
@@ -35,6 +40,8 @@ export function HowItWorks() {
         "Choose and fund potential brands with valid historical data. Enjoy passive income with the highest level of transparency."
       ),
       color: "bg-purple-50 border-purple-100",
+      href: "/investor/dashboard/marketplace",
+      cta: t("Jelajahi Marketplace", "Explore Marketplace"),
     },
     {
       icon: <Briefcase className="w-8 h-8 text-orange-600" />,
@@ -44,6 +51,8 @@ export function HowItWorks() {
         "Run daily outlet operations according to SOPs, monitor stock availability, and ensure excellent customer service."
       ),
       color: "bg-orange-50 border-orange-100",
+      href: "/login",
+      cta: t("Masuk sebagai Operator", "Login as Operator"),
     },
   ];
 
@@ -83,9 +92,11 @@ export function HowItWorks() {
               <p className="text-gray-400 text-sm leading-relaxed mb-8 flex-1">
                 {item.description}
               </p>
-              <Button variant="outline" className="w-full bg-transparent border-gray-700 text-white hover:bg-gray-800 hover:text-white">
-                {t("Pelajari", "Learn More")}
-              </Button>
+              <Link href={item.href}>
+                <Button variant="outline" className="w-full bg-transparent border-gray-700 text-white hover:bg-gray-800 hover:text-white">
+                  {item.cta}
+                </Button>
+              </Link>
             </motion.div>
           ))}
         </div>

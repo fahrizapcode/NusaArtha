@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MapPin, TrendingUp } from "lucide-react";
+import Link from "next/link";
 
 const marketplaceItems = [
   {
@@ -69,9 +70,11 @@ export function MarketplacePreview() {
               Setiap brand telah melewati proses due diligence ketat dan siap untuk diekspansi bersama.
             </p>
           </div>
-          <Button variant="outline" className="shrink-0 font-semibold bg-white">
-            Lihat Semua Peluang
-          </Button>
+          <Link href="/investor/dashboard/marketplace">
+            <Button variant="outline" className="shrink-0 font-semibold bg-white">
+              Lihat Semua Peluang
+            </Button>
+          </Link>
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -142,9 +145,11 @@ export function MarketplacePreview() {
 
               {/* Action */}
               <div className="p-5 pt-0 mt-auto">
-                <Button className="w-full bg-gray-950 hover:bg-gray-800 text-white">
-                  Lihat Detail
-                </Button>
+                <Link href="/investor/dashboard/marketplace">
+                  <Button className="w-full bg-gray-950 hover:bg-gray-800 text-white">
+                    Lihat Detail
+                  </Button>
+                </Link>
               </div>
             </motion.div>
           ))}
