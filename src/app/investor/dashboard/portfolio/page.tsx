@@ -68,7 +68,7 @@ export default function PortfolioPage() {
       const enriched: EnrichedInvestment[] = await Promise.all(
         invs.map(async (inv) => {
           const onChainBalance = await getTokenBalance(publicKey, inv.pool.id);
-          const collected = inv.pool.investments.reduce(
+          const collected = (inv.pool.investments ?? []).reduce(
             (s, i) => s + i.tokensOwned * inv.pool.pricePerToken, 0
           );
           const progress = Math.min(

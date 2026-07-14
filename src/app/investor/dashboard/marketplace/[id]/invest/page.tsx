@@ -9,7 +9,6 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useStellarWallet } from "@/lib/stellar/context";
 import { hasTrustline, establishTrustline, getTokenBalance } from "@/lib/stellar/assets";
-import { purchasePoolTokens } from "@/lib/stellar/transactions";
 import { getStellarExpertUrl } from "@/lib/stellar/network";
 
 type PoolData = {
@@ -83,14 +82,25 @@ export default function InvestPage() {
   // ─── Handlers ───────────────────────────────────────────────────────────────
 
   const handleEstablishTrustline = async () => {
-    if (!publicKey || !networkPassphrase) return;
+    if (!publicKey) {
+      setErrorMsg("Wallet belum terhubung. Hubungkan Freighter terlebih dahulu.");
+      setStep("error");
+      return;
+    }
     setStep("processing");
-    const res = await establishTrustline(publicKey, poolId, networkPassphrase);
-    if (res.success) {
-      setTrustlineOk(true);
-      setStep("confirm");
-    } else {
-      setErrorMsg(res.error || "Gagal membuat trustline");
+    try {
+      // networkPassphrase bisa null jika context belum ter-set, assets.ts akan fallback ke config
+      const res = await establishTrustline(publicKey, poolId, networkPassphrase);
+      if (res.success) {
+        setTrustlineOk(true);
+        setStep("input");
+      } else {
+        const msg = res.error || "Gagal membuat trustline";
+        setErrorMsg(msg);
+        setStep("error");
+      }
+    } catch (err: any) {
+      setErrorMsg(err?.message || "Terjadi kesalahan tak terduga saat membuat trustline");
       setStep("error");
     }
   };
@@ -99,7 +109,7 @@ export default function InvestPage() {
     if (!publicKey) return;
     setStep("processing");
 
-    // 1. Record in DB first (optimistic)
+    // 1. Record investment in DB
     const dbRes = await fetch("/api/investments", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -113,16 +123,21 @@ export default function InvestPage() {
       return;
     }
 
-    // 2. Execute Stellar transaction
-    const txRes = await purchasePoolTokens(publicKey, poolId, tokens, `INVEST:${poolId.slice(0, 10)}`);
+    // 2. Mint tokens server-side (platform signs, no Freighter needed here)
+    const mintRes = await fetch("/api/investments/mint", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ poolId, investorPublicKey: publicKey, tokenAmount: tokens }),
+    });
 
-    if (txRes.success) {
-      setTxHash(txRes.txHash);
+    const mintData = await mintRes.json();
+
+    if (mintData.success) {
+      setTxHash(mintData.txHash);
       await refreshBalances();
       setStep("success");
     } else {
-      // Rollback: we don't have a delete endpoint so just note the error
-      setErrorMsg(txRes.error || "Transaksi Stellar gagal");
+      setErrorMsg(mintData.error || "Transaksi Stellar gagal");
       setStep("error");
     }
   };
@@ -215,7 +230,7 @@ export default function InvestPage() {
       <div className="max-w-[560px] mx-auto py-16 flex flex-col items-center gap-4 text-center">
         <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
         <p className="font-semibold text-gray-900">Memproses transaksi Stellar…</p>
-        <p className="text-sm text-gray-500">Tanda tangani transaksi di Freighter wallet Anda.</p>
+        <p className="text-sm text-gray-500">Mohon tunggu, jangan tutup halaman ini.</p>
       </div>
     );
   }
@@ -267,15 +282,30 @@ export default function InvestPage() {
                     Anda perlu membuat trustline untuk menerima token pool ini di wallet Stellar Anda.
                     Ini hanya perlu dilakukan sekali.
                   </p>
+                  <p className="text-xs text-amber-600 mt-1 font-mono">
+                    Network: {networkPassphrase ? (networkPassphrase.includes("Test") ? "TESTNET ✓" : networkPassphrase.slice(0,20)+"…") : "Dari config (TESTNET)"}
+                  </p>
                 </div>
               </div>
-              <Button
-                size="sm"
-                onClick={handleEstablishTrustline}
-                className="bg-amber-600 hover:bg-amber-700 text-white"
-              >
-                Buat Trustline
-              </Button>
+              <div className="flex gap-2 flex-wrap">
+                <Button
+                  size="sm"
+                  onClick={handleEstablishTrustline}
+                  className="bg-amber-600 hover:bg-amber-700 text-white"
+                >
+                  Buat Trustline
+                </Button>
+                {process.env.NODE_ENV === "development" && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setTrustlineOk(true)}
+                    className="border-amber-300 text-amber-700 hover:bg-amber-50 text-xs"
+                  >
+                    Skip (Dev Only)
+                  </Button>
+                )}
+              </div>
             </div>
           )}
 

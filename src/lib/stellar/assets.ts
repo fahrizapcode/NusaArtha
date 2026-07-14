@@ -48,16 +48,30 @@ export function getPoolAsset(poolId: string): StellarSdk.Asset {
 export async function establishTrustline(
   investorPublicKey: string,
   poolId: string,
-  networkPassphrase: string
+  networkPassphrase?: string | null
 ): Promise<{ txHash: string; success: boolean; error?: string }> {
   try {
+    // Fallback ke config jika networkPassphrase tidak disediakan
+    const { networkPassphrase: configPassphrase } = getStellarConfig();
+    const passphrase = networkPassphrase || configPassphrase;
+
+    const issuer = getPlatformIssuer();
+    if (!issuer) {
+      return {
+        txHash: "",
+        success: false,
+        error:
+          "Platform issuer key belum dikonfigurasi. Isi NEXT_PUBLIC_PLATFORM_ISSUER_KEY di .env.local lalu restart server.",
+      };
+    }
+
     const server = getHorizonServer();
     const asset = getPoolAsset(poolId);
 
     const account = await server.loadAccount(investorPublicKey);
     const tx = new StellarSdk.TransactionBuilder(account, {
       fee: StellarSdk.BASE_FEE,
-      networkPassphrase,
+      networkPassphrase: passphrase,
     })
       .addOperation(
         StellarSdk.Operation.changeTrust({
@@ -65,21 +79,30 @@ export async function establishTrustline(
           limit: "1000000000",
         })
       )
-      .setTimeout(30)
+      .setTimeout(60)
       .build();
 
-    const signedXdr = await signTransactionWithFreighter(tx.toXDR(), networkPassphrase);
-    if (!signedXdr) throw new Error("User rejected signing");
+    const signedXdr = await signTransactionWithFreighter(tx.toXDR(), passphrase);
+    if (!signedXdr) {
+      return {
+        txHash: "",
+        success: false,
+        error:
+          "Freighter tidak mengembalikan transaksi yang ditandatangani. " +
+          "Pastikan Freighter terbuka, tidak terkunci, dan network-nya TESTNET.",
+      };
+    }
 
     const result = await server.submitTransaction(
-      StellarSdk.TransactionBuilder.fromXDR(signedXdr, networkPassphrase) as StellarSdk.Transaction
+      StellarSdk.TransactionBuilder.fromXDR(signedXdr, passphrase) as StellarSdk.Transaction
     );
     return { txHash: (result as any).hash, success: true };
   } catch (err: any) {
-    const detail =
-      err?.response?.data?.extras?.result_codes
-        ? JSON.stringify(err.response.data.extras.result_codes)
-        : err?.message || String(err);
+    const resultCodes = err?.response?.data?.extras?.result_codes;
+    const detail = resultCodes
+      ? JSON.stringify(resultCodes)
+      : err?.message || String(err);
+    console.error("[Stellar] establishTrustline error:", detail);
     return { txHash: "", success: false, error: detail };
   }
 }

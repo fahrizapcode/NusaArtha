@@ -28,6 +28,7 @@ export async function GET(request: Request) {
         pool: {
           include: {
             brand: { select: { id: true, name: true, businessType: true } },
+            investments: { select: { tokensOwned: true } },
           },
         },
         investor: { select: { id: true, name: true, email: true, walletAddress: true } },

@@ -1,6 +1,3 @@
-// src/lib/stellar/network.ts
-// Stellar network configuration and Horizon/Soroban client setup
-
 import * as StellarSdk from "@stellar/stellar-sdk";
 
 export type StellarNetworkConfig = {
