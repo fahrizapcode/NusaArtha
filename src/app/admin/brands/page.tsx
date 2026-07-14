@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils";
 import { Search, ChevronRight, Clock } from "lucide-react";
 import Link from "next/link";
 import prisma from "@/lib/prisma";
+import { BrandFilterTabs } from "./brand-filter-tabs";
 
 const STATUS_STYLES: Record<string, string> = {
   PENDING: "bg-orange-50 text-orange-700",
@@ -20,7 +21,14 @@ const STATUS_LABEL: Record<string, string> = {
   HIGH_RISK: "Ditolak",
 };
 
-export default async function AdminBrandsPage() {
+export default async function AdminBrandsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ filter?: string }>;
+}) {
+  const params = await searchParams;
+  const filter = params.filter || "all";
+
   const brands = await prisma.brand.findMany({
     include: { owner: true, pools: { select: { id: true, status: true } } },
     orderBy: { createdAt: "desc" },
@@ -32,6 +40,12 @@ export default async function AdminBrandsPage() {
     approved: brands.filter((b) => ["MATURE", "MEZZANINE", "EMERGING"].includes(b.riskLevel)).length,
     rejected: brands.filter((b) => b.riskLevel === "HIGH_RISK").length,
   };
+
+  const filteredBrands = filter === "all" ? brands
+    : filter === "pending" ? brands.filter((b) => b.riskLevel === "PENDING")
+    : filter === "approved" ? brands.filter((b) => ["MATURE", "MEZZANINE", "EMERGING"].includes(b.riskLevel))
+    : filter === "rejected" ? brands.filter((b) => b.riskLevel === "HIGH_RISK")
+    : brands;
 
   return (
     <div className="max-w-[1100px] mx-auto space-y-6">
@@ -52,26 +66,7 @@ export default async function AdminBrandsPage() {
             className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-400 shadow-sm"
           />
         </div>
-        <div className="flex gap-2 flex-wrap">
-          {[
-            { label: `Semua (${counts.all})`, val: "all" },
-            { label: `Menunggu (${counts.pending})`, val: "pending" },
-            { label: `Disetujui (${counts.approved})`, val: "approved" },
-            { label: `Ditolak (${counts.rejected})`, val: "rejected" },
-          ].map((f) => (
-            <button
-              key={f.val}
-              className={cn(
-                "px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
-                f.val === "all"
-                  ? "bg-gray-900 text-white"
-                  : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"
-              )}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
+        <BrandFilterTabs counts={counts} />
       </div>
 
       {/* Table */}
@@ -89,14 +84,14 @@ export default async function AdminBrandsPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
-            {brands.length === 0 && (
+            {filteredBrands.length === 0 && (
               <tr>
                 <td colSpan={7} className="px-5 py-10 text-center text-gray-400">
                   Belum ada pengajuan brand.
                 </td>
               </tr>
             )}
-            {brands.map((brand) => (
+            {filteredBrands.map((brand) => (
               <tr key={brand.id} className="hover:bg-gray-50/50 transition-colors">
                 <td className="px-5 py-4">
                   <div className="flex items-center gap-3">

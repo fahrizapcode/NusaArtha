@@ -31,7 +31,6 @@ export default async function AdminOutletsPage() {
           id: true,
           name: true,
           brand: { select: { name: true } },
-          posTransactions: false,
         },
       },
       posTransactions: {

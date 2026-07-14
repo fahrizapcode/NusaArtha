@@ -40,15 +40,17 @@ export default function MonitoringPage() {
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
-    if (!publicKey) return;
     try {
-      const res = await fetch(`/api/dashboard/brand?walletAddress=${publicKey}`);
+      const meRes = await fetch("/api/auth/me");
+      if (!meRes.ok) { router.push("/login"); return; }
+      const me = await meRes.json();
+      const res = await fetch(`/api/dashboard/brand?ownerId=${me.user.id}`);
       const data = await res.json();
       setPools(data.pools || []);
     } finally {
       setLoading(false);
     }
-  }, [publicKey]);
+  }, [router]);
 
   useEffect(() => { load(); }, [load]);
 
