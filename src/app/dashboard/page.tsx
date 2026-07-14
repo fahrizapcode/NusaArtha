@@ -42,16 +42,13 @@ type BrandInfo = {
   businessType: string;
   riskLevel: string;
   readinessScore: number | null;
+  legalDocsCID: string | null;
+  sopDocsCID: string | null;
+  profileCompletedAt: string | null;
+  nib: string | null;
+  npwp: string | null;
+  description: string | null;
 };
-
-const ONBOARDING_TASKS = [
-  { label: "Brand berhasil didaftarkan", done: true },
-  { label: "Lengkapi Profil Brand", done: false },
-  { label: "Upload Dokumen Pendukung", done: false },
-  { label: "Verifikasi Brand", done: false },
-  { label: "Brand Readiness Assessment", done: false },
-  { label: "Publikasikan Brand", done: false },
-];
 
 const STATUS_CONFIG: Record<string, { label: string; cls: string }> = {
   DRAFT: { label: "Menunggu Review", cls: "bg-amber-50 text-amber-700 border border-amber-200" },
@@ -143,12 +140,37 @@ export default function DashboardPage() {
 
   // ── Pending / onboarding state ───────────────────────────────────────────────
   if (stats && !stats.isApproved) {
-    const completedTasks = stats.isPending ? 3 : 1;
-    const progressPercent = Math.round((completedTasks / ONBOARDING_TASKS.length) * 100);
-    const tasks = ONBOARDING_TASKS.map((t, i) => ({
-      ...t,
-      done: stats.isPending ? i <= 2 : i === 0,
-    }));
+    // Compute tasks from real data
+    const tasks = [
+      { label: "Brand berhasil didaftarkan", done: true, href: null },
+      {
+        label: "Lengkapi Profil Brand",
+        done: !!brand.profileCompletedAt || !!(brand.description),
+        href: "/profile/complete",
+      },
+      {
+        label: "Upload Dokumen Pendukung",
+        done: !!(brand.legalDocsCID || (brand.nib && brand.npwp)),
+        href: "/profile/complete",
+      },
+      {
+        label: "Verifikasi Brand",
+        done: stats.isPending,
+        href: null,
+      },
+      {
+        label: "Brand Readiness Assessment",
+        done: brand.readinessScore != null,
+        href: null,
+      },
+      {
+        label: "Disetujui Platform",
+        done: stats.isApproved,
+        href: null,
+      },
+    ];
+    const completedTasks = tasks.filter((t) => t.done).length;
+    const progressPercent = Math.round((completedTasks / tasks.length) * 100);
 
     return (
       <div className="max-w-[1200px] mx-auto flex flex-col xl:flex-row gap-6">
@@ -215,9 +237,15 @@ export default function DashboardPage() {
                   {task.done
                     ? <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
                     : <CircleDashed className="w-5 h-5 text-gray-300 flex-shrink-0 mt-0.5" />}
-                  <span className={cn("text-sm font-medium", task.done ? "text-gray-900" : "text-gray-400")}>
-                    {task.label}
-                  </span>
+                  {task.href && !task.done ? (
+                    <Link href={task.href} className="text-sm font-medium text-blue-600 hover:underline">
+                      {task.label} →
+                    </Link>
+                  ) : (
+                    <span className={cn("text-sm font-medium", task.done ? "text-gray-900" : "text-gray-400")}>
+                      {task.label}
+                    </span>
+                  )}
                 </div>
               ))}
             </div>

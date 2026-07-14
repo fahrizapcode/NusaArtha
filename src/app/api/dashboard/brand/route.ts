@@ -81,6 +81,10 @@ export async function GET(request: Request) {
         readinessScore: brand.readinessScore,
         legalDocsCID: brand.legalDocsCID,
         sopDocsCID: brand.sopDocsCID,
+        profileCompletedAt: brand.profileCompletedAt,
+        nib: brand.nib,
+        npwp: brand.npwp,
+        description: brand.description,
       },
       pools,
       stats: {

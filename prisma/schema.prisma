@@ -40,7 +40,29 @@ model Brand {
   riskLevel         String      @default("PENDING") // EMERGING, MEZZANINE, MATURE, HIGH_RISK, PENDING
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
-  
+
+  // Extended profile fields (from /profile/complete)
+  description       String?
+  vision            String?
+  mission           String?
+  phone             String?
+  website           String?
+  socialMedia       String?
+  yearFounded       Int?
+  nib               String?
+  npwp              String?
+  outletCount       Int?
+  outletLocations   String?     // JSON string
+  monthlyRevenue    Float?
+  monthlyTransactions Int?
+  averageOrderValue Float?
+  operationalCosts  Float?
+  capitalPerOutlet  Float?
+  supplyChain       String?
+  qualityStandard   String?
+  mainProducts      String?     // JSON string
+  profileCompletedAt DateTime?  // null = belum lengkap, ada tanggal = sudah
+
   pools             InvestmentPool[]
 }
 

@@ -38,6 +38,8 @@ export default function LoginPage() {
         router.push("/dashboard");
       } else if (data.user.role === "INVESTOR") {
         router.push("/investor/dashboard/marketplace");
+      } else if (data.user.role === "OPERATOR") {
+        router.push("/operator");
       } else {
         router.push("/dashboard");
       }
