@@ -13,11 +13,11 @@ import {
   Info,
   ShieldCheck,
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { useStellarWallet } from "@/lib/stellar/context";
 import { castVoteOnStellar, hasVotedOnChain } from "@/lib/stellar/governance";
-import { getTokenBalance } from "@/lib/stellar/assets";
+import { getTokenBalance, poolIdToAssetCode } from "@/lib/stellar/assets";
 import { getStellarExpertUrl } from "@/lib/stellar/network";
 
 type Proposal = {
@@ -75,34 +75,77 @@ const MOCK_PROPOSALS: Proposal[] = [
 ];
 
 export default function GovernancePage() {
-  const { isConnected, publicKey, networkPassphrase } = useStellarWallet();
+  const { isConnected, publicKey, networkPassphrase, poolBalances } =
+    useStellarWallet();
   const [proposals, setProposals] = useState<Proposal[]>(MOCK_PROPOSALS);
   const [voting, setVoting] = useState<Record<string, boolean>>({});
   const [selected, setSelected] = useState<Record<string, number>>({});
   const [txHashes, setTxHashes] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [loadingVoteCheck, setLoadingVoteCheck] = useState<Record<string, boolean>>({});
+  const [loadingVoteCheck, setLoadingVoteCheck] = useState<
+    Record<string, boolean>
+  >({});
+
+  const resolveTokenBalance = useCallback(
+    async (poolId: string) => {
+      const directBalance = await getTokenBalance(publicKey || "", poolId);
+      if (directBalance > 0) return directBalance;
+
+      const assetCode = poolIdToAssetCode(poolId).toUpperCase();
+      const matchingBalance = poolBalances.find((balance) => {
+        const currentCode = balance.assetCode.toUpperCase();
+        return (
+          currentCode === assetCode ||
+          currentCode.includes(assetCode) ||
+          assetCode.includes(currentCode)
+        );
+      });
+      return matchingBalance?.balance ?? 0;
+    },
+    [publicKey, poolBalances],
+  );
 
   // Check on-chain vote status when wallet connects
   useEffect(() => {
     if (!publicKey) return;
-    proposals.forEach(async (p) => {
-      if (p.status !== "active") return;
-      setLoadingVoteCheck((prev) => ({ ...prev, [p.id]: true }));
-      const [voteStatus, balance] = await Promise.all([
-        hasVotedOnChain(publicKey, p.id),
-        getTokenBalance(publicKey, p.poolId),
-      ]);
-      setProposals((prev) =>
-        prev.map((prop) =>
-          prop.id === p.id
-            ? { ...prop, myVote: voteStatus.voted ? voteStatus.optionId : null, tokenBalance: balance }
-            : prop
-        )
+
+    let cancelled = false;
+
+    const runCheck = async () => {
+      const checked = await Promise.all(
+        proposals.map(async (p) => {
+          if (p.status !== "active") return p;
+          setLoadingVoteCheck((prev) => ({ ...prev, [p.id]: true }));
+          const [voteStatus, balance] = await Promise.all([
+            hasVotedOnChain(publicKey, p.id),
+            resolveTokenBalance(p.poolId),
+          ]);
+          return {
+            ...p,
+            myVote: voteStatus.voted ? voteStatus.optionId : null,
+            tokenBalance: balance,
+          };
+        }),
       );
-      setLoadingVoteCheck((prev) => ({ ...prev, [p.id]: false }));
-    });
-  }, [publicKey]);
+
+      if (!cancelled) {
+        setProposals(checked);
+        setLoadingVoteCheck((prev) => {
+          const next = { ...prev };
+          proposals.forEach((p) => {
+            next[p.id] = false;
+          });
+          return next;
+        });
+      }
+    };
+
+    void runCheck();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [publicKey, resolveTokenBalance]);
 
   const handleVote = async (proposalId: string, poolId: string) => {
     const optionId = selected[proposalId];
@@ -111,7 +154,12 @@ export default function GovernancePage() {
     setVoting((prev) => ({ ...prev, [proposalId]: true }));
     setErrors((prev) => ({ ...prev, [proposalId]: "" }));
 
-    const result = await castVoteOnStellar(publicKey, proposalId, poolId, optionId);
+    const result = await castVoteOnStellar(
+      publicKey,
+      proposalId,
+      poolId,
+      optionId,
+    );
 
     if (result.success) {
       setTxHashes((prev) => ({ ...prev, [proposalId]: result.txHash }));
@@ -123,14 +171,17 @@ export default function GovernancePage() {
             myVote: optionId,
             myVoteTxHash: result.txHash,
             options: p.options.map((o) =>
-              o.id === optionId ? { ...o, votes: o.votes + 1 } : o
+              o.id === optionId ? { ...o, votes: o.votes + 1 } : o,
             ),
             participation: Math.min(100, p.participation + 1),
           };
-        })
+        }),
       );
     } else {
-      setErrors((prev) => ({ ...prev, [proposalId]: result.error || "Vote gagal" }));
+      setErrors((prev) => ({
+        ...prev,
+        [proposalId]: result.error || "Vote gagal",
+      }));
     }
     setVoting((prev) => ({ ...prev, [proposalId]: false }));
   };
@@ -145,9 +196,12 @@ export default function GovernancePage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl md:text-2xl font-bold text-gray-900">Governance</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-gray-900">
+            Governance
+          </h1>
           <p className="text-sm text-gray-500 mt-1">
-            Gunakan token Anda sebagai hak suara dalam pengambilan keputusan outlet.
+            Gunakan token Anda sebagai hak suara dalam pengambilan keputusan
+            outlet.
           </p>
         </div>
         {!isConnected && <WalletButton variant="outline" size="sm" />}
@@ -159,7 +213,9 @@ export default function GovernancePage() {
           <ShieldCheck className="w-4 h-4 flex-shrink-0" />
           <span>
             Vote Anda dicatat permanen di jaringan <strong>Stellar</strong> —{" "}
-            <span className="font-mono text-xs">{publicKey.slice(0, 6)}…{publicKey.slice(-4)}</span>
+            <span className="font-mono text-xs">
+              {publicKey.slice(0, 6)}…{publicKey.slice(-4)}
+            </span>
           </span>
         </div>
       )}
@@ -168,7 +224,8 @@ export default function GovernancePage() {
         <div className="flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-sm text-blue-800">
           <Info className="w-4 h-4 flex-shrink-0 mt-0.5" />
           <span>
-            Hubungkan <strong>Freighter Wallet</strong> untuk memeriksa hak suara dan melakukan voting on-chain.
+            Hubungkan <strong>Freighter Wallet</strong> untuk memeriksa hak
+            suara dan melakukan voting on-chain.
           </span>
         </div>
       )}
@@ -185,10 +242,14 @@ export default function GovernancePage() {
           const checkingVote = loadingVoteCheck[p.id];
           const errMsg = errors[p.id];
           const txHash = txHashes[p.id] || p.myVoteTxHash;
-          const noTokens = isConnected && (p.tokenBalance ?? 0) <= 0 && !isEnded;
+          const noTokens =
+            isConnected && (p.tokenBalance ?? 0) <= 0 && !isEnded;
 
           return (
-            <div key={p.id} className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+            <div
+              key={p.id}
+              className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden"
+            >
               {/* Card header */}
               <div className="p-6 sm:p-8 pb-0">
                 <div className="flex flex-wrap items-center gap-2 mb-3">
@@ -197,7 +258,7 @@ export default function GovernancePage() {
                       "text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wide",
                       isEnded
                         ? "bg-gray-100 text-gray-600"
-                        : "bg-blue-100 text-blue-700"
+                        : "bg-blue-100 text-blue-700",
                     )}
                   >
                     {isEnded ? "Selesai" : "Aktif"}
@@ -218,8 +279,12 @@ export default function GovernancePage() {
                     </a>
                   )}
                 </div>
-                <h2 className="text-lg font-bold text-gray-900 mb-2">{p.title}</h2>
-                <p className="text-sm text-gray-600 leading-relaxed mb-5">{p.description}</p>
+                <h2 className="text-lg font-bold text-gray-900 mb-2">
+                  {p.title}
+                </h2>
+                <p className="text-sm text-gray-600 leading-relaxed mb-5">
+                  {p.description}
+                </p>
 
                 {/* Participation bar */}
                 <div className="mb-6">
@@ -227,7 +292,9 @@ export default function GovernancePage() {
                     <span className="text-xs font-semibold text-gray-500 uppercase">
                       Partisipasi · {totalVotes} suara
                     </span>
-                    <span className="text-sm font-bold text-gray-900">{p.participation}%</span>
+                    <span className="text-sm font-bold text-gray-900">
+                      {p.participation}%
+                    </span>
                   </div>
                   <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
                     <div
@@ -241,7 +308,10 @@ export default function GovernancePage() {
               {/* Options */}
               <div className="px-6 sm:px-8 pb-6 sm:pb-8 space-y-3">
                 {p.options.map((opt) => {
-                  const pct = totalVotes > 0 ? Math.round((opt.votes / totalVotes) * 100) : 0;
+                  const pct =
+                    totalVotes > 0
+                      ? Math.round((opt.votes / totalVotes) * 100)
+                      : 0;
                   const isWinner = winner?.id === opt.id;
                   const isMyChoice = p.myVote === opt.id;
                   const isSelected = selected[p.id] === opt.id;
@@ -249,7 +319,11 @@ export default function GovernancePage() {
                   return (
                     <button
                       key={opt.id}
-                      onClick={() => !isEnded && !hasVoted && setSelected((s) => ({ ...s, [p.id]: opt.id }))}
+                      onClick={() =>
+                        !isEnded &&
+                        !hasVoted &&
+                        setSelected((s) => ({ ...s, [p.id]: opt.id }))
+                      }
                       disabled={isEnded || hasVoted || !isConnected || noTokens}
                       className={cn(
                         "w-full text-left rounded-2xl border-2 overflow-hidden transition-all",
@@ -259,10 +333,10 @@ export default function GovernancePage() {
                         isMyChoice
                           ? "border-blue-500 bg-blue-50"
                           : isSelected && !hasVoted
-                          ? "border-blue-400 bg-blue-50/50"
-                          : isWinner && isEnded
-                          ? "border-green-400 bg-green-50"
-                          : "border-gray-100 bg-white"
+                            ? "border-blue-400 bg-blue-50/50"
+                            : isWinner && isEnded
+                              ? "border-green-400 bg-green-50"
+                              : "border-gray-100 bg-white",
                       )}
                     >
                       <div className="px-4 py-3 flex items-center justify-between gap-3">
@@ -282,21 +356,27 @@ export default function GovernancePage() {
                               isMyChoice
                                 ? "text-blue-800"
                                 : isWinner && isEnded
-                                ? "text-green-800"
-                                : "text-gray-800"
+                                  ? "text-green-800"
+                                  : "text-gray-800",
                             )}
                           >
                             {opt.label}
                           </span>
                         </div>
-                        <span className="text-sm font-bold text-gray-600 shrink-0">{pct}%</span>
+                        <span className="text-sm font-bold text-gray-600 shrink-0">
+                          {pct}%
+                        </span>
                       </div>
                       {/* Vote bar */}
                       <div className="h-1.5 w-full bg-gray-100">
                         <div
                           className={cn(
                             "h-full transition-all duration-700",
-                            isMyChoice ? "bg-blue-500" : isWinner && isEnded ? "bg-green-500" : "bg-gray-300"
+                            isMyChoice
+                              ? "bg-blue-500"
+                              : isWinner && isEnded
+                                ? "bg-green-500"
+                                : "bg-gray-300",
                           )}
                           style={{ width: `${pct}%` }}
                         />
@@ -325,8 +405,12 @@ export default function GovernancePage() {
                 <div className="pt-2">
                   {isEnded ? (
                     <div className="flex items-center justify-between bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
-                      <span className="text-sm text-gray-500">Hasil akhir:</span>
-                      <span className="font-bold text-green-700">{winner?.label}</span>
+                      <span className="text-sm text-gray-500">
+                        Hasil akhir:
+                      </span>
+                      <span className="font-bold text-green-700">
+                        {winner?.label}
+                      </span>
                     </div>
                   ) : hasVoted ? (
                     <div className="flex items-center gap-3 bg-blue-50 border border-blue-100 rounded-xl px-4 py-3">
@@ -342,7 +426,8 @@ export default function GovernancePage() {
                             rel="noopener noreferrer"
                             className="text-xs text-blue-600 hover:underline flex items-center gap-1 mt-0.5"
                           >
-                            <ExternalLink className="w-3 h-3" /> Verifikasi on-chain
+                            <ExternalLink className="w-3 h-3" /> Verifikasi
+                            on-chain
                           </a>
                         )}
                       </div>
@@ -351,17 +436,21 @@ export default function GovernancePage() {
                     <WalletButton className="w-full justify-center" />
                   ) : checkingVote ? (
                     <div className="flex items-center gap-2 text-sm text-gray-500 justify-center py-2">
-                      <Loader2 className="w-4 h-4 animate-spin" /> Memeriksa status vote…
+                      <Loader2 className="w-4 h-4 animate-spin" /> Memeriksa
+                      status vote…
                     </div>
                   ) : (
                     <Button
                       onClick={() => handleVote(p.id, p.poolId)}
-                      disabled={selected[p.id] === undefined || isVoting || noTokens}
+                      disabled={
+                        selected[p.id] === undefined || isVoting || noTokens
+                      }
                       className="w-full bg-blue-600 hover:bg-blue-700 text-white h-11 gap-2 disabled:bg-blue-300"
                     >
                       {isVoting ? (
                         <>
-                          <Loader2 className="w-4 h-4 animate-spin" /> Menandatangani via Freighter…
+                          <Loader2 className="w-4 h-4 animate-spin" />{" "}
+                          Menandatangani via Freighter…
                         </>
                       ) : (
                         <>

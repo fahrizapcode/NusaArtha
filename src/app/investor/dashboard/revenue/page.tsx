@@ -3,8 +3,14 @@
 import { Button } from "@/components/ui/button";
 import { WalletButton } from "@/components/ui/wallet-button";
 import {
-  LineChart, Wallet, ArrowDownToLine, History, ExternalLink,
-  Loader2, RefreshCw, TrendingUp,
+  LineChart,
+  Wallet,
+  ArrowDownToLine,
+  History,
+  ExternalLink,
+  Loader2,
+  RefreshCw,
+  TrendingUp,
 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
@@ -17,6 +23,7 @@ type PaymentRecord = {
   type: string;
   amount: string;
   asset_code?: string;
+  asset_issuer?: string;
   asset_type: string;
   from: string;
   to: string;
@@ -49,14 +56,16 @@ export default function RevenuePage() {
     try {
       const payments: PaymentRecord[] = await getPaymentHistory(publicKey, 50);
 
-      // Filter incoming XLM payments from platform (revenue distributions)
-      const incoming = payments.filter(
-        (p) =>
-          p.type === "payment" &&
-          p.to === publicKey &&
-          p.asset_type === "native" &&
-          (PLATFORM_KEY ? p.from === PLATFORM_KEY : true)
-      );
+      // Tampilkan incoming payments yang relevan untuk wallet investor, baik XLM maupun asset token.
+      const incoming = payments.filter((p) => {
+        if (p.type !== "payment" || p.to !== publicKey) return false;
+        if (p.asset_type === "native") return true;
+        if (!p.asset_code || !p.asset_issuer) return false;
+        if (PLATFORM_KEY) {
+          return p.asset_issuer === PLATFORM_KEY || p.from === PLATFORM_KEY;
+        }
+        return true;
+      });
 
       const now = new Date();
       const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -72,13 +81,17 @@ export default function RevenuePage() {
         totalVal += amountNum;
         if (isThisMonth) monthVal += amountNum;
 
-        // Format period as "Bulan Tahun"
-        const period = date.toLocaleDateString("id-ID", { month: "long", year: "numeric" });
+        const isNative = p.asset_type === "native";
+        const assetLabel = isNative ? "XLM" : p.asset_code || "Asset";
+        const period = date.toLocaleDateString("id-ID", {
+          month: "long",
+          year: "numeric",
+        });
 
         return {
-          outlet: "Outlet Portfolio",
+          outlet: isNative ? "Revenue Sharing" : "Token Pool",
           period,
-          amount: `XLM ${amountNum.toFixed(2)}`,
+          amount: `${assetLabel} ${amountNum.toFixed(2)}`,
           amountNum,
           status: "Selesai" as const,
           txHash: p.transaction_hash,
@@ -93,7 +106,9 @@ export default function RevenuePage() {
     }
   }, [publicKey, PLATFORM_KEY]);
 
-  useEffect(() => { loadHistory(); }, [loadHistory]);
+  useEffect(() => {
+    loadHistory();
+  }, [loadHistory]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -106,7 +121,8 @@ export default function RevenuePage() {
     const csv = [
       "Outlet,Periode,Jumlah,Status,TX Hash",
       ...distributions.map(
-        (d) => `"${d.outlet}","${d.period}","${d.amount}","${d.status}","${d.txHash}"`
+        (d) =>
+          `"${d.outlet}","${d.period}","${d.amount}","${d.status}","${d.txHash}"`,
       ),
     ].join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
@@ -121,7 +137,9 @@ export default function RevenuePage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl md:text-2xl font-bold text-gray-900">Revenue sharing</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-gray-900">
+            Revenue sharing
+          </h1>
           <p className="text-sm text-gray-500 mt-1">
             Riwayat distribusi bagi hasil via jaringan Stellar.
           </p>
@@ -135,7 +153,9 @@ export default function RevenuePage() {
               disabled={refreshing}
               className="gap-1.5 border-gray-200 text-gray-600"
             >
-              <RefreshCw className={cn("w-3.5 h-3.5", refreshing && "animate-spin")} />
+              <RefreshCw
+                className={cn("w-3.5 h-3.5", refreshing && "animate-spin")}
+              />
               Refresh
             </Button>
           )}
@@ -150,7 +170,9 @@ export default function RevenuePage() {
             <LineChart className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase">Total Diterima</p>
+            <p className="text-xs font-semibold text-gray-500 uppercase">
+              Total Diterima
+            </p>
             <p className="text-2xl font-bold text-gray-900">
               {isConnected ? `${stats.total.toFixed(2)} XLM` : "—"}
             </p>
@@ -161,7 +183,9 @@ export default function RevenuePage() {
             <Wallet className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase">Bulan Ini</p>
+            <p className="text-xs font-semibold text-gray-500 uppercase">
+              Bulan Ini
+            </p>
             <p className="text-2xl font-bold text-gray-900">
               {isConnected ? `${stats.thisMonth.toFixed(2)} XLM` : "—"}
             </p>
@@ -172,7 +196,9 @@ export default function RevenuePage() {
             <TrendingUp className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase">Saldo XLM</p>
+            <p className="text-xs font-semibold text-gray-500 uppercase">
+              Saldo XLM
+            </p>
             <p className="text-2xl font-bold text-gray-900">
               {isConnected ? `${xlmBalance.toFixed(2)} XLM` : "—"}
             </p>
@@ -183,7 +209,9 @@ export default function RevenuePage() {
       {/* Table */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="p-5 border-b border-gray-50 flex items-center justify-between">
-          <h2 className="font-bold text-gray-900">Riwayat Distribusi On-Chain</h2>
+          <h2 className="font-bold text-gray-900">
+            Riwayat Distribusi On-Chain
+          </h2>
           <div className="flex gap-2">
             <Button
               variant="outline"
@@ -212,12 +240,15 @@ export default function RevenuePage() {
             <div className="w-14 h-14 bg-gray-50 rounded-full flex items-center justify-center">
               <History className="w-7 h-7 text-gray-300" />
             </div>
-            <p className="text-sm text-gray-500">Hubungkan wallet untuk melihat riwayat distribusi.</p>
+            <p className="text-sm text-gray-500">
+              Hubungkan wallet untuk melihat riwayat distribusi.
+            </p>
             <WalletButton />
           </div>
         ) : loading ? (
           <div className="flex items-center justify-center gap-3 py-16 text-gray-400">
-            <Loader2 className="w-5 h-5 animate-spin" /> Memuat riwayat dari Stellar…
+            <Loader2 className="w-5 h-5 animate-spin" /> Memuat riwayat dari
+            Stellar…
           </div>
         ) : distributions.length === 0 ? (
           <div className="py-16 flex flex-col items-center gap-3 text-center px-4">
@@ -226,7 +257,8 @@ export default function RevenuePage() {
               Belum ada distribusi ditemukan untuk wallet ini.
             </p>
             <p className="text-xs text-gray-400">
-              Distribusi revenue dikirim langsung ke wallet Stellar Anda oleh platform.
+              Distribusi revenue dikirim langsung ke wallet Stellar Anda oleh
+              platform.
             </p>
           </div>
         ) : (
@@ -234,26 +266,40 @@ export default function RevenuePage() {
             <table className="w-full text-sm text-left whitespace-nowrap">
               <thead>
                 <tr className="bg-gray-50/60 border-b border-gray-100">
-                  <th className="px-5 py-4 text-xs font-semibold text-gray-500 uppercase">Outlet</th>
-                  <th className="px-5 py-4 text-xs font-semibold text-gray-500 uppercase">Periode</th>
-                  <th className="px-5 py-4 text-xs font-semibold text-gray-500 uppercase">Jumlah</th>
-                  <th className="px-5 py-4 text-xs font-semibold text-gray-500 uppercase">Status</th>
-                  <th className="px-5 py-4 text-xs font-semibold text-gray-500 uppercase">Tx</th>
+                  <th className="px-5 py-4 text-xs font-semibold text-gray-500 uppercase">
+                    Outlet
+                  </th>
+                  <th className="px-5 py-4 text-xs font-semibold text-gray-500 uppercase">
+                    Periode
+                  </th>
+                  <th className="px-5 py-4 text-xs font-semibold text-gray-500 uppercase">
+                    Jumlah
+                  </th>
+                  <th className="px-5 py-4 text-xs font-semibold text-gray-500 uppercase">
+                    Status
+                  </th>
+                  <th className="px-5 py-4 text-xs font-semibold text-gray-500 uppercase">
+                    Tx
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {distributions.map((row, i) => (
                   <tr key={i} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-5 py-4 font-medium text-gray-900">{row.outlet}</td>
+                    <td className="px-5 py-4 font-medium text-gray-900">
+                      {row.outlet}
+                    </td>
                     <td className="px-5 py-4 text-gray-600">{row.period}</td>
-                    <td className="px-5 py-4 font-bold text-green-600">{row.amount}</td>
+                    <td className="px-5 py-4 font-bold text-green-600">
+                      {row.amount}
+                    </td>
                     <td className="px-5 py-4">
                       <span
                         className={cn(
                           "text-[10px] font-bold px-2.5 py-1 rounded-md uppercase",
                           row.status === "Selesai"
                             ? "bg-green-50 text-green-700"
-                            : "bg-orange-50 text-orange-700"
+                            : "bg-orange-50 text-orange-700",
                         )}
                       >
                         {row.status}

@@ -11,11 +11,26 @@ export type PoolAsset = {
   issuer: string;
 };
 
+function normalizeAssetCode(value: string): string {
+  return value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+}
+
+function matchesPoolAsset(balance: any, poolId: string): boolean {
+  const expectedCode = normalizeAssetCode(poolIdToAssetCode(poolId));
+  const actualCode = normalizeAssetCode(balance?.asset_code || "");
+  if (!expectedCode || !actualCode) return false;
+  return (
+    actualCode === expectedCode ||
+    actualCode.includes(expectedCode) ||
+    expectedCode.includes(actualCode)
+  );
+}
+
 /**
  * Derives a deterministic Stellar asset code from a pool ID (max 12 chars alphanumeric)
  */
 export function poolIdToAssetCode(poolId: string): string {
-  const cleaned = poolId.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+  const cleaned = normalizeAssetCode(poolId);
   return cleaned.slice(0, 12) || "NAPOOL";
 }
 
@@ -48,7 +63,7 @@ export function getPoolAsset(poolId: string): StellarSdk.Asset {
 export async function establishTrustline(
   investorPublicKey: string,
   poolId: string,
-  networkPassphrase?: string | null
+  networkPassphrase?: string | null,
 ): Promise<{ txHash: string; success: boolean; error?: string }> {
   try {
     // Fallback ke config jika networkPassphrase tidak disediakan
@@ -77,12 +92,15 @@ export async function establishTrustline(
         StellarSdk.Operation.changeTrust({
           asset,
           limit: "1000000000",
-        })
+        }),
       )
       .setTimeout(60)
       .build();
 
-    const signedXdr = await signTransactionWithFreighter(tx.toXDR(), passphrase);
+    const signedXdr = await signTransactionWithFreighter(
+      tx.toXDR(),
+      passphrase,
+    );
     if (!signedXdr) {
       return {
         txHash: "",
@@ -94,7 +112,10 @@ export async function establishTrustline(
     }
 
     const result = await server.submitTransaction(
-      StellarSdk.TransactionBuilder.fromXDR(signedXdr, passphrase) as StellarSdk.Transaction
+      StellarSdk.TransactionBuilder.fromXDR(
+        signedXdr,
+        passphrase,
+      ) as StellarSdk.Transaction,
     );
     return { txHash: (result as any).hash, success: true };
   } catch (err: any) {
@@ -110,16 +131,15 @@ export async function establishTrustline(
 /**
  * Checks if an account already has a trustline for a pool asset
  */
-export async function hasTrustline(publicKey: string, poolId: string): Promise<boolean> {
+export async function hasTrustline(
+  publicKey: string,
+  poolId: string,
+): Promise<boolean> {
   try {
     const server = getHorizonServer();
-    const asset = getPoolAsset(poolId);
     const account = await server.loadAccount(publicKey);
     return account.balances.some(
-      (b: any) =>
-        b.asset_type !== "native" &&
-        b.asset_code === asset.code &&
-        b.asset_issuer === asset.issuer
+      (b: any) => b.asset_type !== "native" && matchesPoolAsset(b, poolId),
     );
   } catch {
     return false;
@@ -129,18 +149,21 @@ export async function hasTrustline(publicKey: string, poolId: string): Promise<b
 /**
  * Gets the token balance for an investor in a pool
  */
-export async function getTokenBalance(publicKey: string, poolId: string): Promise<number> {
+export async function getTokenBalance(
+  publicKey: string,
+  poolId: string,
+): Promise<number> {
   try {
     const server = getHorizonServer();
-    const asset = getPoolAsset(poolId);
     const account = await server.loadAccount(publicKey);
-    const balance = account.balances.find(
-      (b: any) =>
-        b.asset_type !== "native" &&
-        b.asset_code === asset.code &&
-        b.asset_issuer === asset.issuer
+    const matches = account.balances.filter(
+      (b: any) => b.asset_type !== "native" && matchesPoolAsset(b, poolId),
     );
-    return balance ? parseFloat((balance as any).balance) : 0;
+    if (matches.length === 0) return 0;
+    return matches.reduce(
+      (total, b: any) => total + parseFloat(b.balance || "0"),
+      0,
+    );
   } catch {
     return 0;
   }
@@ -164,7 +187,7 @@ export async function getNativeBalance(publicKey: string): Promise<number> {
  * Fetches all pool token balances for a wallet
  */
 export async function getAllPoolBalances(
-  publicKey: string
+  publicKey: string,
 ): Promise<Array<{ assetCode: string; issuer: string; balance: number }>> {
   try {
     const server = getHorizonServer();
