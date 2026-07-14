@@ -39,7 +39,7 @@ export function CTA() {
                 {t("Daftarkan Brand", "Register Brand")}
               </Button>
             </Link>
-            <Link href="/login">
+            <Link href="/investor/login">
               <Button size="lg" variant="outline" className="h-14 px-8 text-base bg-transparent border-white/30 text-white hover:bg-white/10 hover:text-white font-semibold">
                 {t("Gabung Sebagai Investor", "Join as Investor")}
               </Button>

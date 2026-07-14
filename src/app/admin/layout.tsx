@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 const MENUS = [
   { label: "Dashboard", icon: LayoutDashboard, href: "/admin" },
@@ -28,6 +28,12 @@ const MENUS = [
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/login");
+  };
 
   const isActive = (href: string) => {
     if (href === "/admin") return pathname === "/admin";
@@ -75,10 +81,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <p className="text-xs text-gray-400 truncate">admin@nusaartha.id</p>
             </div>
           </div>
-          <Link href="/" className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-gray-500 hover:text-red-600 hover:bg-red-50 transition-colors group">
+          <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-gray-500 hover:text-red-600 hover:bg-red-50 transition-colors group">
             <LogOut className="w-4 h-4 text-gray-400 group-hover:text-red-500" />
             Keluar
-          </Link>
+          </button>
         </div>
       </aside>
 
@@ -90,7 +96,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             {MENUS.find((m) => isActive(m.href))?.label ?? "Admin"}
           </p>
           <div className="flex items-center gap-3">
-            <button className="relative p-2 text-gray-400 hover:text-gray-700 transition-colors">
+            <button onClick={() => alert('Fitur notifikasi akan segera hadir')} className="relative p-2 text-gray-400 hover:text-gray-700 transition-colors">
               <Bell className="w-5 h-5" />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
             </button>

@@ -114,7 +114,7 @@ export default function MarketplacePage() {
         c.brandName.toLowerCase().includes(search.toLowerCase()) ||
         c.outletName.toLowerCase().includes(search.toLowerCase()) ||
         c.location.toLowerCase().includes(search.toLowerCase());
-      const matchCat = category === "Semua" || c.category === category;
+      const matchCat = category === "Semua" || c.category.toLowerCase().includes(category.toLowerCase());
       return matchSearch && matchCat;
     })
     .sort((a, b) => {

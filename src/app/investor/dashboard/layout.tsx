@@ -60,6 +60,13 @@ function WalletSection() {
           <LogOut className="w-4 h-4 text-gray-400 group-hover:text-red-500 transition-colors" />
           Disconnect Wallet
         </button>
+        <button 
+          onClick={handleLogout}
+          className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-gray-500 hover:text-red-600 hover:bg-red-50 w-full transition-colors group"
+        >
+          <LogOut className="w-4 h-4 text-gray-400 group-hover:text-red-500 transition-colors" />
+          Keluar
+        </button>
       </div>
     );
   }
@@ -92,11 +99,11 @@ export default function InvestorDashboardLayout({ children }: { children: React.
     <div className="min-h-screen bg-gray-50 flex">
       {/* Sidebar (Desktop) */}
       <aside className="w-64 bg-white border-r border-gray-100 flex-col hidden md:flex fixed inset-y-0 z-30">
-        <div className="h-16 flex items-center px-6 border-b border-gray-100">
-          <Link href="/" className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">
-            NusaArtha
+        <div className="h-16 flex items-center justify-between px-6 border-b border-gray-100">
+          <Link href="/">
+            <img src="/logo.svg" alt="NusaArtha" className="h-6" />
           </Link>
-          <span className="ml-2 text-[10px] font-bold tracking-wider uppercase text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">Investor</span>
+          <span className="text-[10px] font-bold tracking-wider uppercase text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">Investor</span>
         </div>
 
         <div className="flex-1 py-6 px-4 space-y-1.5 overflow-y-auto">
@@ -151,7 +158,7 @@ export default function InvestorDashboardLayout({ children }: { children: React.
               />
             </div>
 
-            <button className="relative p-2 text-gray-400 hover:text-gray-600 transition-colors">
+            <button onClick={() => alert('Fitur notifikasi akan segera hadir')} className="relative p-2 text-gray-400 hover:text-gray-600 transition-colors">
               <Bell className="w-5 h-5" />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-white" />
             </button>

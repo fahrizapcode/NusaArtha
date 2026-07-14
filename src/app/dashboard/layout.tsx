@@ -7,13 +7,12 @@ import {
   Bell,
   Search,
   PackagePlus,
-  BadgeCheck,
   Building2,
   LineChart,
 } from "lucide-react";
-import { usePathname, useSearchParams, useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Suspense, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { WalletButton } from "@/components/ui/wallet-button";
 import { useStellarWallet } from "@/lib/stellar/context";
 
@@ -29,10 +28,6 @@ const BASE_MENUS = [
 function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const status = searchParams.get("status");
-  const isApproved = status === "approved";
-  const isPending = status === "pending";
   const { isConnected, publicKey, xlmBalance } = useStellarWallet();
   const [userRole, setUserRole] = useState<string | null>(null);
 
@@ -57,10 +52,8 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
 
   const menus = BASE_MENUS.map((m) => ({
     ...m,
-    disabled: m.label === "Dashboard" ? false : !isApproved,
-    href: m.label === "Dashboard" 
-      ? (status ? `/dashboard?status=${status}` : "/dashboard") 
-      : (isApproved ? `${m.href}?status=approved` : "#"),
+    disabled: false,
+    href: m.href,
   }));
 
   const isMenuActive = (href: string) => {
@@ -91,9 +84,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                 className={cn(
                   "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group",
                   active
-                    ? isApproved
-                      ? "bg-blue-50 text-blue-700"
-                      : "bg-green-50 text-green-700"
+                    ? "bg-blue-50 text-blue-700"
                     : "text-gray-600 hover:bg-gray-50 hover:text-gray-900",
                   menu.disabled && "opacity-50 cursor-not-allowed pointer-events-none"
                 )}
@@ -102,7 +93,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                   className={cn(
                     "w-[18px] h-[18px] flex-shrink-0",
                     active
-                      ? isApproved ? "text-blue-600" : "text-green-600"
+                      ? "text-blue-600"
                       : "text-gray-400 group-hover:text-gray-500"
                   )}
                 />
@@ -163,7 +154,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
               />
             </div>
 
-            <button className="relative p-2 text-gray-400 hover:text-gray-600 transition-colors">
+            <button onClick={() => alert('Fitur notifikasi akan segera hadir')} className="relative p-2 text-gray-400 hover:text-gray-600 transition-colors">
               <Bell className="w-5 h-5" />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-white" />
             </button>
@@ -184,9 +175,5 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-gray-400 text-sm">Loading...</div>}>
-      <DashboardLayoutContent>{children}</DashboardLayoutContent>
-    </Suspense>
-  );
+  return <DashboardLayoutContent>{children}</DashboardLayoutContent>;
 }
