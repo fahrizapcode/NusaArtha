@@ -10,15 +10,46 @@ import { useLanguage } from "@/lib/language-context";
 export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState("");
   const { language, setLanguage, t } = useLanguage();
 
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
+
+      const sectionIds = ["beranda", "solusi", "cara-kerja", "marketplace", "tentang", "faq"];
+      let current = "";
+      for (const section of sectionIds) {
+        const element = document.getElementById(section);
+        if (element) {
+          const rect = element.getBoundingClientRect();
+          // Adjust threshold based on header height
+          if (rect.top <= 120 && rect.bottom >= 120) {
+            current = section;
+            break;
+          }
+        }
+      }
+      setActiveSection(current);
     };
     window.addEventListener("scroll", handleScroll);
+    handleScroll();
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  const handleSmoothScroll = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    e.preventDefault();
+    const id = href.substring(1);
+    const element = document.getElementById(id);
+    if (element) {
+      const offsetTop = element.getBoundingClientRect().top + window.scrollY - 80;
+      window.scrollTo({
+        top: offsetTop,
+        behavior: "smooth"
+      });
+    }
+    setIsMobileMenuOpen(false);
+  };
 
   const navLinks = [
     { name: t("Beranda", "Home"), href: "#beranda" },
@@ -47,15 +78,29 @@ export function Navbar() {
 
           {/* Desktop Nav */}
           <nav className="hidden md:flex items-center gap-8">
-            {navLinks.map((link) => (
-              <a
-                key={link.name}
-                href={link.href}
-                className="text-sm font-medium text-gray-600 hover:text-green-600 transition-colors"
-              >
-                {link.name}
-              </a>
-            ))}
+            {navLinks.map((link) => {
+              const isActive = activeSection === link.href.substring(1);
+              return (
+                <a
+                  key={link.name}
+                  href={link.href}
+                  onClick={(e) => handleSmoothScroll(e, link.href)}
+                  className={cn(
+                    "text-sm font-medium transition-colors relative py-1",
+                    isActive ? "text-green-600" : "text-gray-600 hover:text-green-600"
+                  )}
+                >
+                  {link.name}
+                  {isActive && (
+                    <motion.div
+                      layoutId="nav-indicator"
+                      className="absolute -bottom-1 inset-x-0 mx-auto w-[5px] h-[5px] bg-green-600 rounded-full"
+                      transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                    />
+                  )}
+                </a>
+              );
+            })}
           </nav>
 
           {/* Desktop Actions */}
@@ -66,7 +111,7 @@ export function Navbar() {
             <Button variant="outline" className="font-semibold">
               {t("Masuk", "Sign In")}
             </Button>
-            <Button className="font-semibold">
+            <Button className="font-semibold" onClick={() => window.location.href = '/register-brand'}>
               {t("Daftarkan Brand", "Register Brand")}
             </Button>
           </div>
@@ -94,21 +139,30 @@ export function Navbar() {
             className="md:hidden bg-white border-b border-gray-100 overflow-hidden"
           >
             <div className="container mx-auto px-4 py-6 flex flex-col gap-4">
-              {navLinks.map((link) => (
-                <a
-                  key={link.name}
-                  href={link.href}
-                  className="text-base font-medium text-gray-900 py-2 border-b border-gray-50 last:border-0"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  {link.name}
-                </a>
-              ))}
+              {navLinks.map((link) => {
+                const isActive = activeSection === link.href.substring(1);
+                return (
+                  <a
+                    key={link.name}
+                    href={link.href}
+                    onClick={(e) => handleSmoothScroll(e, link.href)}
+                    className={cn(
+                      "text-base font-medium py-2 border-b border-gray-50 last:border-0 flex items-center justify-between",
+                      isActive ? "text-green-600" : "text-gray-900"
+                    )}
+                  >
+                    {link.name}
+                    {isActive && (
+                      <div className="w-[5px] h-[5px] bg-green-600 rounded-full" />
+                    )}
+                  </a>
+                );
+              })}
               <div className="flex flex-col gap-3 mt-4">
                 <Button variant="outline" className="w-full justify-center">
                   {t("Masuk", "Sign In")}
                 </Button>
-                <Button className="w-full justify-center">
+                <Button className="w-full justify-center" onClick={() => window.location.href = '/register-brand'}>
                   {t("Daftarkan Brand", "Register Brand")}
                 </Button>
               </div>

@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { useLanguage } from "@/lib/language-context";
+import Link from "next/link";
 
 
 export function Hero() {
@@ -46,10 +47,12 @@ export function Hero() {
               <Button size="lg" className="h-14 px-8 text-base shadow-lg shadow-green-600/20">
                 {t("Daftarkan Brand", "Register Brand")}
               </Button>
-              <Button size="lg" variant="outline" className="h-14 px-8 text-base">
-                {t("Jelajahi Marketplace", "Explore Marketplace")}
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
+              <Link href="/investor/login">
+                <Button size="lg" variant="outline" className="h-14 px-8 text-base">
+                  {t("Jelajahi Marketplace", "Explore Marketplace")}
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
             </div>
 
             {/* Stats */}

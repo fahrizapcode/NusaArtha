@@ -44,7 +44,7 @@ export function Problem() {
   ];
 
   return (
-    <section id="solusi" className="py-24 bg-gray-50">
+    <section id="solusi" className="py-24 bg-white">
       <div className="container mx-auto px-4 md:px-6">
         <div className="text-center max-w-2xl mx-auto mb-16">
           <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-gray-950 mb-4">
@@ -58,30 +58,48 @@ export function Problem() {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {problems.map((item, index) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-100px" }}
-              transition={{ duration: 0.5, delay: index * 0.1 }}
-            >
-              <Card className="h-full border-gray-100 shadow-sm hover:shadow-md transition-shadow bg-white">
-                <CardHeader className="pb-2">
-                  <div className="w-12 h-12 rounded-lg bg-gray-50 flex items-center justify-center mb-4 border border-gray-100">
-                    {item.icon}
-                  </div>
-                  <CardTitle className="text-xl">{item.title}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <CardDescription className="text-base">
-                    {item.description}
-                  </CardDescription>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
+        <div className="grid lg:grid-cols-2 gap-12 items-center">
+          {/* Left Side: Illustration */}
+          <motion.div 
+            initial={{ opacity: 0, x: -30 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="flex justify-center lg:justify-start"
+          >
+            <img 
+              src="/problem-illustration.png" 
+              alt="Problem Illustration" 
+              className="w-full max-w-md lg:max-w-full h-auto object-contain" 
+            />
+          </motion.div>
+
+          {/* Right Side: Cards */}
+          <div className="grid sm:grid-cols-2 gap-6">
+            {problems.map((item, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-100px" }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
+              >
+                <Card className="h-full border-gray-100 shadow-sm hover:shadow-md transition-shadow bg-white">
+                  <CardHeader className="pb-2">
+                    <div className="w-12 h-12 rounded-lg bg-gray-50 flex items-center justify-center mb-4 border border-gray-100">
+                      {item.icon}
+                    </div>
+                    <CardTitle className="text-xl">{item.title}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <CardDescription className="text-base">
+                      {item.description}
+                    </CardDescription>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
         </div>
       </div>
     </section>
