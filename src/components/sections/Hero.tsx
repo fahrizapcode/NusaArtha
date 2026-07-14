@@ -49,7 +49,7 @@ export function Hero() {
                   {t("Daftarkan Brand", "Register Brand")}
                 </Button>
               </Link>
-              <Link href="/investor/dashboard/marketplace">
+              <Link href="/investor/login">
                 <Button size="lg" variant="outline" className="h-14 px-8 text-base">
                   {t("Jelajahi Marketplace", "Explore Marketplace")}
                   <ArrowRight className="ml-2 h-4 w-4" />

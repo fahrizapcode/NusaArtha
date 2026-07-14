@@ -13,7 +13,7 @@ import {
   BadgeCheck,
   Wallet,
 } from "lucide-react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useStellarWallet } from "@/lib/stellar/context";
 import { WalletButton } from "@/components/ui/wallet-button";
@@ -27,8 +27,14 @@ const MENUS = [
 ];
 
 function WalletSection() {
+  const router = useRouter();
   const { isConnected, publicKey, xlmBalance, connect, disconnect, isConnecting, isFreighterInstalled: installed } =
     useStellarWallet();
+
+  const handleLogout = async () => {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/login");
+  };
 
   if (isConnected && publicKey) {
     return (
@@ -61,12 +67,13 @@ function WalletSection() {
   return (
     <div className="space-y-2">
       <WalletButton variant="outline" className="w-full justify-center" />
-      <Link href="/investor/login">
-        <button className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-gray-500 hover:text-red-600 hover:bg-red-50 w-full transition-colors group">
-          <LogOut className="w-4 h-4 text-gray-400 group-hover:text-red-500 transition-colors" />
-          Keluar
-        </button>
-      </Link>
+      <button 
+        onClick={handleLogout}
+        className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-gray-500 hover:text-red-600 hover:bg-red-50 w-full transition-colors group"
+      >
+        <LogOut className="w-4 h-4 text-gray-400 group-hover:text-red-500 transition-colors" />
+        Keluar
+      </button>
     </div>
   );
 }

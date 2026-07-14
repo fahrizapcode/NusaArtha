@@ -40,7 +40,7 @@ export function HowItWorks() {
         "Choose and fund potential brands with valid historical data. Enjoy passive income with the highest level of transparency."
       ),
       color: "bg-purple-50 border-purple-100",
-      href: "/investor/dashboard/marketplace",
+      href: "/investor/login",
       cta: t("Jelajahi Marketplace", "Explore Marketplace"),
     },
     {

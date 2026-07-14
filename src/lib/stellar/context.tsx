@@ -120,6 +120,8 @@ export function StellarWalletProvider({ children }: { children: ReactNode }) {
         setNetworkPassphrase(conn.networkPassphrase);
         setIsConnected(true);
       }
+    } catch (err: any) {
+      alert(err.message || "Gagal terhubung ke Freighter");
     } finally {
       setIsConnecting(false);
     }

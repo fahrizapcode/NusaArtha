@@ -9,48 +9,52 @@ async function main() {
   // Create Admin
   const admin = await prisma.user.upsert({
     where: { email: 'admin@nusaartha.id' },
-    update: { passwordHash },
+    update: { passwordHash, walletAddress: 'GCLGZJCRJHMBYN54MJGOTSDRDGNMS6W4RLHVKMB6AQIUY64VPMWCMUTK' },
     create: {
       email: 'admin@nusaartha.id',
       name: 'Super Admin',
       passwordHash,
       role: 'ADMIN',
+      walletAddress: 'GCLGZJCRJHMBYN54MJGOTSDRDGNMS6W4RLHVKMB6AQIUY64VPMWCMUTK',
     },
   });
 
   // Create Brand Owner
   const brandOwner = await prisma.user.upsert({
     where: { email: 'brand@nusaartha.id' },
-    update: { passwordHash },
+    update: { passwordHash, walletAddress: 'GA5S43JUBEISIBDRV22BXS4ZNCDE3DLAF2EFV5TLXYTT5TBGE5C2ILZL' },
     create: {
       email: 'brand@nusaartha.id',
       name: 'Pemilik Brand Kopi',
       passwordHash,
       role: 'BRAND_OWNER',
+      walletAddress: 'GA5S43JUBEISIBDRV22BXS4ZNCDE3DLAF2EFV5TLXYTT5TBGE5C2ILZL',
     },
   });
 
   // Create Operator
   const operator = await prisma.user.upsert({
     where: { email: 'operator@nusaartha.id' },
-    update: { passwordHash },
+    update: { passwordHash, walletAddress: 'GBIQAC4DEABTF7OMXFPGMEJHVRGCJPC5FQ7PWLJBYVCNQBPPGFGONPRI' },
     create: {
       email: 'operator@nusaartha.id',
       name: 'Operator Outlet 1',
       passwordHash,
       role: 'OPERATOR',
+      walletAddress: 'GBIQAC4DEABTF7OMXFPGMEJHVRGCJPC5FQ7PWLJBYVCNQBPPGFGONPRI',
     },
   });
 
   // Create Investor
   const investor = await prisma.user.upsert({
     where: { email: 'investor@nusaartha.id' },
-    update: { passwordHash },
+    update: { passwordHash, walletAddress: 'GD5Y4MJSKLJNGWBPBWNTZFO7CY7KFJWKTP2VON4UJOM776OO6QJKDZX3' },
     create: {
       email: 'investor@nusaartha.id',
       name: 'Investor Publik',
       passwordHash,
       role: 'INVESTOR',
+      walletAddress: 'GD5Y4MJSKLJNGWBPBWNTZFO7CY7KFJWKTP2VON4UJOM776OO6QJKDZX3',
     },
   });
 

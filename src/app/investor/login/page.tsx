@@ -1,17 +1,55 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Building2, TrendingUp, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Building2, TrendingUp, CheckCircle2, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 
 export default function InvestorLoginPage() {
   const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    router.push("/investor/verify"); // Simulate going to KYC
+    
+    if (!email.trim() || !password.trim()) {
+      setError("Email dan password wajib diisi.");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Gagal login. Periksa kembali email dan password Anda.");
+      }
+
+      if (data.user.role === "INVESTOR") {
+        router.push("/investor/dashboard/marketplace");
+      } else {
+        throw new Error("Akun ini bukan akun Investor.");
+      }
+
+      router.refresh();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -22,6 +60,9 @@ export default function InvestorLoginPage() {
           <ArrowLeft className="w-4 h-4 text-gray-500" />
           <span className="text-sm font-medium text-gray-600">Kembali ke Beranda</span>
         </Link>
+        <div className="flex items-center gap-2">
+          <img src="/logo.svg" alt="NusaArtha" className="h-6" />
+        </div>
       </nav>
 
       <div className="flex-1 flex items-center justify-center p-4">
@@ -45,6 +86,9 @@ export default function InvestorLoginPage() {
                   </label>
                   <input
                     type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
                     placeholder="nama@email.com"
                     className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all"
                   />
@@ -58,13 +102,18 @@ export default function InvestorLoginPage() {
                   </div>
                   <input
                     type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
                     placeholder="••••••••"
                     className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all"
                   />
                 </div>
 
-                <Button type="button" onClick={() => router.push("/investor/dashboard/marketplace")} className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white rounded-xl mt-6">
-                  Masuk
+                {error && <div className="text-red-500 text-sm bg-red-50 p-3 rounded-lg border border-red-100">{error}</div>}
+
+                <Button type="submit" disabled={loading} className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white rounded-xl mt-6">
+                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Masuk"}
                 </Button>
               </form>
 

@@ -4,12 +4,17 @@ import prisma from "@/lib/prisma";
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const status = searchParams.get("status");
+    // Support multiple status values: ?status=PUBLISHED&status=ACTIVE
+    const statuses = searchParams.getAll("status");
     const brandId = searchParams.get("brandId");
 
     const pools = await prisma.investmentPool.findMany({
       where: {
-        ...(status ? { status } : {}),
+        ...(statuses.length === 1
+          ? { status: statuses[0] }
+          : statuses.length > 1
+          ? { status: { in: statuses } }
+          : {}),
         ...(brandId ? { brandId } : {}),
       },
       include: {

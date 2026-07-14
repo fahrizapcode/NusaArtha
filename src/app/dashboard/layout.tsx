@@ -11,9 +11,9 @@ import {
   Building2,
   LineChart,
 } from "lucide-react";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Suspense } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { WalletButton } from "@/components/ui/wallet-button";
 import { useStellarWallet } from "@/lib/stellar/context";
 
@@ -28,11 +28,32 @@ const BASE_MENUS = [
 
 function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const status = searchParams.get("status");
   const isApproved = status === "approved";
   const isPending = status === "pending";
   const { isConnected, publicKey, xlmBalance } = useStellarWallet();
+  const [userRole, setUserRole] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.user) {
+          const role = data.user.role === "BRAND_OWNER" ? "Brand Owner" 
+            : data.user.role === "OPERATOR" ? "Operator" 
+            : data.user.role;
+          setUserRole(role);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleLogout = async () => {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/login");
+  };
 
   const menus = BASE_MENUS.map((m) => ({
     ...m,
@@ -51,8 +72,13 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-gray-50 flex font-sans">
       {/* Sidebar */}
       <aside className="w-60 bg-white border-r border-gray-100 hidden md:flex flex-col fixed inset-y-0 z-10">
-        <div className="h-16 flex items-center px-5 border-b border-gray-100">
+        <div className="h-16 flex items-center justify-between px-5 border-b border-gray-100">
           <img src="/logo.svg" alt="NusaArtha" className="h-6" />
+          {userRole && (
+            <span className="text-[10px] font-bold bg-indigo-50 text-indigo-700 px-2 py-1 rounded-md uppercase tracking-wider">
+              {userRole}
+            </span>
+          )}
         </div>
 
         <div className="flex-1 overflow-y-auto py-4 px-2.5 flex flex-col gap-0.5">
@@ -104,6 +130,15 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
           ) : (
             <WalletButton variant="outline" size="sm" className="w-full justify-center" />
           )}
+        </div>
+        
+        <div className="p-3 border-t border-gray-100">
+          <button 
+            onClick={handleLogout}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl text-sm font-medium transition-colors"
+          >
+            Keluar
+          </button>
         </div>
       </aside>
 

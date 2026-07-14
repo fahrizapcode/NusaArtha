@@ -51,8 +51,7 @@ export default function RegisterPage() {
           <span className="text-sm font-medium text-gray-600">Kembali ke Beranda</span>
         </Link>
         <div className="flex items-center gap-2">
-          <Store className="w-5 h-5 text-blue-600" />
-          <span className="font-bold text-gray-900">NusaArtha</span>
+          <img src="/logo.svg" alt="NusaArtha" className="h-6" />
         </div>
       </nav>
 

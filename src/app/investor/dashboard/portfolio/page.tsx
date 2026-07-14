@@ -44,10 +44,23 @@ export default function PortfolioPage() {
   const [stats, setStats] = useState({ total: 0, totalValue: 0, activeCampaigns: 0 });
 
   const load = useCallback(async () => {
-    if (!publicKey) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/investments?walletAddress=${publicKey}`);
+      // Support both: wallet address OR JWT session
+      let url = "";
+      if (publicKey) {
+        url = `/api/investments?walletAddress=${publicKey}`;
+      } else {
+        // Try JWT session
+        const meRes = await fetch("/api/auth/me");
+        if (meRes.ok) {
+          const me = await meRes.json();
+          url = `/api/investments?investorId=${me.user.id}`;
+        }
+      }
+      if (!url) { setLoading(false); return; }
+
+      const res = await fetch(url);
       const data = await res.json();
       const invs: Investment[] = data.investments || [];
 
@@ -79,6 +92,11 @@ export default function PortfolioPage() {
   }, [publicKey]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Also reload when wallet connects
+  useEffect(() => {
+    if (publicKey) load();
+  }, [publicKey, load]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -168,14 +186,16 @@ export default function PortfolioPage() {
       <div>
         <h2 className="text-lg font-bold text-gray-900 mb-4">Daftar investasi</h2>
 
-        {!isConnected ? (
+        {!isConnected && investments.length === 0 ? (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm py-16 px-4 text-center">
             <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
               <Wallet className="w-8 h-8 text-blue-400" />
             </div>
-            <h3 className="text-base font-semibold text-gray-900 mb-2">Hubungkan Freighter Wallet</h3>
-            <p className="text-sm text-gray-500 mb-5">Sambungkan wallet untuk melihat portofolio Anda.</p>
-            <WalletButton className="mx-auto" />
+            <h3 className="text-base font-semibold text-gray-900 mb-2">Belum ada investasi</h3>
+            <p className="text-sm text-gray-500 mb-5">Mulai berinvestasi di marketplace untuk membangun portfolio Anda.</p>
+            <Link href="/investor/dashboard/marketplace">
+              <Button className="bg-blue-600 hover:bg-blue-700 text-white">Jelajahi Marketplace</Button>
+            </Link>
           </div>
         ) : loading ? (
           <div className="flex items-center justify-center gap-3 py-16 text-gray-400">

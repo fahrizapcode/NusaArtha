@@ -54,23 +54,20 @@ export async function connectFreighter(): Promise<StellarWalletConnection | null
     // Cek apakah extension terinstall
     const connected = await isConnected();
     if (!connected.isConnected) {
-      console.error("[Freighter] Extension tidak terinstall.");
-      return null;
+      throw new Error("Freighter tidak terdeteksi atau terkunci. Pastikan ekstensi sudah di-unlock.");
     }
 
     // Minta akses (tampilkan popup jika belum di-approve)
     const access = await requestAccess();
     if (access.error) {
-      console.error("[Freighter] Akses ditolak:", access.error);
-      return null;
+      throw new Error(`Akses ditolak oleh Freighter. Cek ekstensi Anda.`);
     }
 
     // Ambil public key dan network
     const [addr, net] = await Promise.all([getAddress(), getNetwork()]);
 
     if (addr.error) {
-      console.error("[Freighter] Gagal ambil address:", addr.error);
-      return null;
+      throw new Error(`Gagal mengambil alamat dari Freighter: ${addr.error}`);
     }
 
     return {
@@ -79,9 +76,9 @@ export async function connectFreighter(): Promise<StellarWalletConnection | null
       networkPassphrase:
         net.networkPassphrase || "Test SDF Network ; September 2015",
     };
-  } catch (err) {
+  } catch (err: any) {
     console.error("[Freighter] Connection error:", err);
-    return null;
+    throw new Error(err.message || "Terjadi kesalahan saat menghubungkan Freighter.");
   }
 }
 

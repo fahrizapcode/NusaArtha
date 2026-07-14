@@ -1,17 +1,54 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, LineChart, Banknote, ShieldCheck } from "lucide-react";
+import { ArrowLeft, LineChart, Banknote, ShieldCheck, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 
 export default function InvestorRegisterPage() {
   const router = useRouter();
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    router.push("/investor/verify"); // Simulate going to KYC
+
+    if (!name.trim() || !email.trim() || !password.trim()) {
+      setError("Semua kolom wajib diisi.");
+      return;
+    }
+    if (password.length < 8) {
+      setError("Password minimal 8 karakter.");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, name, role: "INVESTOR" }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Gagal mendaftar. Silakan coba lagi.");
+      }
+
+      router.push("/investor/login");
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -22,6 +59,9 @@ export default function InvestorRegisterPage() {
           <ArrowLeft className="w-4 h-4 text-gray-500" />
           <span className="text-sm font-medium text-gray-600">Kembali ke Beranda</span>
         </Link>
+        <div className="flex items-center gap-2">
+          <img src="/logo.svg" alt="NusaArtha" className="h-6" />
+        </div>
       </nav>
 
       <div className="flex-1 flex items-center justify-center p-4">
@@ -45,6 +85,9 @@ export default function InvestorRegisterPage() {
                   </label>
                   <input
                     type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
                     placeholder="Nama lengkap Anda"
                     className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all"
                   />
@@ -55,6 +98,9 @@ export default function InvestorRegisterPage() {
                   </label>
                   <input
                     type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
                     placeholder="nama@email.com"
                     className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all"
                   />
@@ -65,13 +111,18 @@ export default function InvestorRegisterPage() {
                   </label>
                   <input
                     type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
                     placeholder="Minimal 8 karakter"
                     className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all"
                   />
                 </div>
 
-                <Button type="button" onClick={() => router.push("/investor/verify")} className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white rounded-xl mt-6">
-                  Daftar
+                {error && <div className="text-red-500 text-sm bg-red-50 p-3 rounded-lg border border-red-100">{error}</div>}
+
+                <Button type="submit" disabled={loading} className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white rounded-xl mt-6">
+                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Daftar"}
                 </Button>
               </form>
 
