@@ -6,21 +6,23 @@ import {
   Settings,
   Bell,
   Search,
-  LogOut,
-  ChevronDown,
   PackagePlus,
   BadgeCheck,
   Building2,
+  LineChart,
 } from "lucide-react";
 import { usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Suspense } from "react";
+import { WalletButton } from "@/components/ui/wallet-button";
+import { useStellarWallet } from "@/lib/stellar/context";
 
 // ─── Base Menus ──────────────────────────────────────────────────────────────
 const BASE_MENUS = [
   { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
   { label: "Paket Outlet", icon: PackagePlus, href: "/dashboard/paket-outlet" },
   { label: "Outlet", icon: Building2, href: "/dashboard/outlet" },
+  { label: "Monitoring", icon: LineChart, href: "/dashboard/monitoring" },
   { label: "Pengaturan", icon: Settings, href: "/dashboard/settings" },
 ];
 
@@ -30,6 +32,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const status = searchParams.get("status");
   const isApproved = status === "approved";
   const isPending = status === "pending";
+  const { isConnected, publicKey, xlmBalance } = useStellarWallet();
 
   const menus = BASE_MENUS.map((m) => ({
     ...m,
@@ -88,11 +91,19 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
           })}
         </div>
 
-        <div className="p-3 border-t border-gray-100">
-          <button className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-red-500 hover:bg-red-50 w-full transition-colors">
-            <LogOut className="w-4 h-4" />
-            Keluar
-          </button>
+        <div className="p-3 border-t border-gray-100 space-y-2">
+          {/* Wallet */}
+          {isConnected && publicKey ? (
+            <div className="px-3 py-2 bg-gray-50 rounded-xl">
+              <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wide mb-0.5">Stellar</p>
+              <p className="text-xs font-mono text-gray-700 truncate">
+                {publicKey.slice(0, 8)}…{publicKey.slice(-6)}
+              </p>
+              <p className="text-[10px] text-gray-500">{xlmBalance.toFixed(2)} XLM</p>
+            </div>
+          ) : (
+            <WalletButton variant="outline" size="sm" className="w-full justify-center" />
+          )}
         </div>
       </aside>
 
@@ -124,25 +135,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
 
             <div className="h-5 w-px bg-gray-200" />
 
-            <button className="flex items-center gap-2.5 text-left">
-              <div className="w-8 h-8 bg-green-100 text-green-700 font-bold rounded-full flex items-center justify-center text-xs ring-2 ring-white shadow-sm">
-                KN
-              </div>
-              <div className="hidden sm:block">
-                <p className="text-sm font-semibold text-gray-900 leading-none">Kopi Nusantara</p>
-                {isApproved ? (
-                  <div className="flex items-center gap-1 mt-1">
-                    <BadgeCheck className="w-3 h-3 text-green-500" />
-                    <p className="text-xs text-green-600 font-medium">Brand Terverifikasi</p>
-                  </div>
-                ) : (
-                  <p className="text-xs text-gray-500 font-medium mt-1">
-                    {isPending ? "Sedang Direview" : "Brand Baru"}
-                  </p>
-                )}
-              </div>
-              <ChevronDown className="w-3.5 h-3.5 text-gray-400 hidden sm:block" />
-            </button>
+            <WalletButton variant="outline" size="sm" />
           </div>
         </header>
 

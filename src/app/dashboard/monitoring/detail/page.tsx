@@ -1,50 +1,87 @@
 "use client";
 
+import { useState, useEffect, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
-  MapPin,
-  Users,
-  ArrowLeft,
-  CheckCircle2,
-  CircleDashed,
-  Clock,
-  Banknote,
-  TrendingUp,
+  MapPin, Users, ArrowLeft, CheckCircle2, CircleDashed,
+  Clock, Banknote, TrendingUp, ExternalLink, Loader2,
 } from "lucide-react";
-import { Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { getStellarExpertUrl } from "@/lib/stellar/network";
+import Link from "next/link";
 
-const PACKAGE_DETAIL = {
-  name: "Paket Outlet BSD City",
-  location: "Tangerang Selatan, Banten",
-  target: "Rp 250.000.000",
-  collected: "Rp 175.000.000",
-  progress: 70,
-  investors: 12,
-  status: "Pooling Berlangsung",
-  publishedDate: "10 Juli 2026",
+type PoolDetail = {
+  id: string;
+  name: string;
+  location: string;
+  status: string;
+  targetFunding: number;
+  pricePerToken: number;
+  totalSupply: number;
+  smartContractAddr?: string;
+  disclosureCID?: string;
+  brand: { name: string };
+  investments: { id: string; tokensOwned: number; investor: { walletAddress: string | null; name: string | null } }[];
+  outlets: { id: string; name: string; status: string }[];
 };
 
-const TIMELINE = [
-  { label: "Paket Dipublikasikan", done: true, desc: "10 Juli 2026" },
-  { label: "Investor Mulai Berinvestasi", done: true, desc: "12 Juli 2026 · 12 investor" },
-  { label: "Pooling Berlangsung", done: false, active: true, desc: "Sisa 18 hari pendanaan" },
-  { label: "Target Pendanaan Tercapai", done: false, desc: "—" },
-  { label: "Outlet Mulai Dibangun", done: false, desc: "—" },
-  { label: "Outlet Beroperasi", done: false, desc: "—" },
+const TIMELINE_STAGES = [
+  { key: "DRAFT", label: "Paket Dipublikasikan" },
+  { key: "PUBLISHED", label: "Pendanaan Berlangsung" },
+  { key: "ACTIVE", label: "Target Tercapai" },
+  { key: "OPERATING", label: "Outlet Beroperasi" },
+  { key: "COMPLETED", label: "Proyek Selesai" },
 ];
+
+const STATUS_ORDER = ["DRAFT", "PUBLISHED", "ACTIVE", "OPERATING", "COMPLETED"];
 
 function DetailContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const status = searchParams.get("status");
+  const poolId = searchParams.get("id");
+
+  const [pool, setPool] = useState<PoolDetail | null>(null);
+  const [collected, setCollected] = useState(0);
+  const [progress, setProgress] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!poolId) { setLoading(false); return; }
+    fetch(`/api/pools/${poolId}`)
+      .then((r) => r.json())
+      .then((d) => {
+        setPool(d.pool);
+        setCollected(d.collected || 0);
+        setProgress(d.progress || 0);
+      })
+      .finally(() => setLoading(false));
+  }, [poolId]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-24 gap-3 text-gray-400">
+        <Loader2 className="w-5 h-5 animate-spin" /> Memuat data…
+      </div>
+    );
+  }
+
+  if (!pool) {
+    return (
+      <div className="text-center py-24">
+        <p className="text-gray-500 mb-4">Paket tidak ditemukan.</p>
+        <Button onClick={() => router.back()} variant="outline">Kembali</Button>
+      </div>
+    );
+  }
+
+  const uniqueInvestors = new Set(pool.investments.map((i) => i.investor.walletAddress)).size;
+  const currentStageIdx = STATUS_ORDER.indexOf(pool.status);
 
   return (
     <div className="max-w-[900px] mx-auto space-y-6">
-      {/* Back button */}
       <button
-        onClick={() => router.push(`/dashboard/monitoring?status=${status}`)}
+        onClick={() => router.back()}
         className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 font-medium transition-colors group"
       >
         <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
@@ -52,98 +89,122 @@ function DetailContent() {
       </button>
 
       <div className="flex flex-col md:flex-row gap-6">
-        {/* Left: Info & Progress */}
+        {/* Left */}
         <div className="flex-1 space-y-5">
-          {/* Package Info Card */}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-5">
               <div>
-                <h1 className="text-xl font-bold text-gray-900 mb-1">{PACKAGE_DETAIL.name}</h1>
+                <h1 className="text-xl font-bold text-gray-900 mb-1">{pool.name}</h1>
                 <div className="flex items-center gap-1.5 text-sm text-gray-500">
                   <MapPin className="w-3.5 h-3.5" />
-                  {PACKAGE_DETAIL.location}
+                  {pool.location}
                 </div>
+                <p className="text-xs text-gray-400 mt-1">{pool.brand.name}</p>
               </div>
-              <span className="text-xs font-semibold px-3 py-1.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200 self-start">
-                {PACKAGE_DETAIL.status}
-              </span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              <div className="bg-gray-50 rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <TrendingUp className="w-4 h-4 text-gray-400" />
-                  <span className="text-xs text-gray-500 font-medium">Target Dana</span>
-                </div>
-                <p className="text-base font-bold text-gray-900">{PACKAGE_DETAIL.target}</p>
-              </div>
-              <div className="bg-gray-50 rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <Banknote className="w-4 h-4 text-gray-400" />
-                  <span className="text-xs text-gray-500 font-medium">Terkumpul</span>
-                </div>
-                <p className="text-base font-bold text-blue-700">{PACKAGE_DETAIL.collected}</p>
-              </div>
-              <div className="bg-gray-50 rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <Users className="w-4 h-4 text-gray-400" />
-                  <span className="text-xs text-gray-500 font-medium">Total Investor</span>
-                </div>
-                <p className="text-base font-bold text-gray-900">{PACKAGE_DETAIL.investors} Investor</p>
-              </div>
-              <div className="bg-gray-50 rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <Clock className="w-4 h-4 text-gray-400" />
-                  <span className="text-xs text-gray-500 font-medium">Dipublikasikan</span>
-                </div>
-                <p className="text-base font-bold text-gray-900">{PACKAGE_DETAIL.publishedDate}</p>
+              <div className="flex flex-col gap-1.5 items-start">
+                <span className="text-xs font-bold px-3 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-100 uppercase">
+                  {pool.status}
+                </span>
+                {pool.smartContractAddr && (
+                  <a
+                    href={getStellarExpertUrl(pool.smartContractAddr, "account")}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-blue-600 hover:underline flex items-center gap-1"
+                  >
+                    <ExternalLink className="w-3 h-3" /> Stellar
+                  </a>
+                )}
               </div>
             </div>
 
-            {/* Big Progress Bar */}
+            {/* Stats grid */}
+            <div className="grid grid-cols-2 gap-3 mb-6">
+              {[
+                { icon: TrendingUp, label: "Target Dana", val: `Rp ${(pool.targetFunding / 1e6).toFixed(0)}Jt` },
+                { icon: Banknote, label: "Terkumpul", val: `Rp ${(collected / 1e6).toFixed(1)}Jt`, blue: true },
+                { icon: Users, label: "Investor", val: `${uniqueInvestors} orang` },
+                { icon: Clock, label: "Sisa Waktu", val: progress >= 100 ? "Selesai" : "30 hari" },
+              ].map((item, i) => (
+                <div key={i} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                  <div className="flex items-center gap-2 mb-1">
+                    <item.icon className="w-4 h-4 text-gray-400" />
+                    <span className="text-xs text-gray-500 font-medium">{item.label}</span>
+                  </div>
+                  <p className={cn("text-base font-bold", item.blue ? "text-blue-700" : "text-gray-900")}>
+                    {item.val}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            {/* Progress bar */}
             <div>
-              <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-semibold text-gray-900">Progress Pendanaan</span>
-                <span className="text-2xl font-bold text-blue-600">{PACKAGE_DETAIL.progress}%</span>
+                <span className={cn("text-2xl font-bold", progress >= 100 ? "text-green-600" : "text-blue-600")}>
+                  {progress}%
+                </span>
               </div>
               <div className="h-4 w-full bg-gray-100 rounded-full overflow-hidden shadow-inner">
                 <div
-                  className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full transition-all duration-700 flex items-center justify-end pr-2"
-                  style={{ width: `${PACKAGE_DETAIL.progress}%` }}
-                >
-                  <span className="text-[10px] font-bold text-white">{PACKAGE_DETAIL.progress}%</span>
-                </div>
-              </div>
-              <div className="flex items-center justify-between mt-2 text-xs text-gray-500">
-                <span>Rp 0</span>
-                <span>{PACKAGE_DETAIL.target}</span>
+                  className={cn("h-full rounded-full transition-all", progress >= 100 ? "bg-green-500" : "bg-blue-600")}
+                  style={{ width: `${Math.max(2, progress)}%` }}
+                />
               </div>
             </div>
           </div>
 
-          {/* Investor Summary Placeholder */}
+          {/* Investors list */}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-            <h2 className="font-semibold text-gray-900 mb-4">Daftar Investor</h2>
-            <div className="space-y-3">
-              {[
-                { name: "Ahmad Fauzi", amount: "Rp 25.000.000", date: "12 Jul 2026" },
-                { name: "Siti Rahma", amount: "Rp 15.000.000", date: "13 Jul 2026" },
-                { name: "Budi Santoso", amount: "Rp 20.000.000", date: "14 Jul 2026" },
-              ].map((inv, i) => (
-                <div key={i} className="flex items-center justify-between py-2.5 border-b border-gray-50 last:border-0">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 text-xs font-bold flex items-center justify-center">
-                      {inv.name.charAt(0)}
+            <h2 className="font-semibold text-gray-900 mb-4">
+              Daftar Investor ({pool.investments.length})
+            </h2>
+            {pool.investments.length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-6">Belum ada investor.</p>
+            ) : (
+              <div className="space-y-3">
+                {pool.investments.slice(0, 10).map((inv, i) => (
+                  <div key={inv.id} className="flex items-center justify-between py-2.5 border-b border-gray-50 last:border-0">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 text-xs font-bold flex items-center justify-center">
+                        {String(i + 1).padStart(2, "0")}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">
+                          {inv.investor.name || (
+                            inv.investor.walletAddress
+                              ? `${inv.investor.walletAddress.slice(0, 8)}…`
+                              : "Investor"
+                          )}
+                        </p>
+                        {inv.investor.walletAddress && (
+                          <a
+                            href={getStellarExpertUrl(inv.investor.walletAddress)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs font-mono text-blue-500 hover:underline"
+                          >
+                            {inv.investor.walletAddress.slice(0, 10)}…
+                          </a>
+                        )}
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">{inv.name}</p>
-                      <p className="text-xs text-gray-500">{inv.date}</p>
+                    <div className="text-right">
+                      <p className="text-sm font-semibold text-gray-900">{inv.tokensOwned} token</p>
+                      <p className="text-xs text-gray-500">
+                        Rp {(inv.tokensOwned * pool.pricePerToken / 1e6).toFixed(2)}Jt
+                      </p>
                     </div>
                   </div>
-                  <span className="text-sm font-semibold text-green-700">{inv.amount}</span>
-                </div>
-              ))}
-            </div>
+                ))}
+                {pool.investments.length > 10 && (
+                  <p className="text-xs text-gray-400 text-center pt-2">
+                    +{pool.investments.length - 10} investor lainnya
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -152,33 +213,54 @@ function DetailContent() {
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 sticky top-24">
             <h2 className="font-semibold text-gray-900 mb-6">Timeline Proses</h2>
             <div className="relative">
-              {/* connecting line */}
               <div className="absolute left-[11px] top-3 bottom-3 w-0.5 bg-gray-100" />
               <div className="space-y-6 relative z-10">
-                {TIMELINE.map((step, i) => (
-                  <div key={i} className="flex items-start gap-4">
-                    {step.done ? (
-                      <CheckCircle2 className="w-6 h-6 text-green-500 flex-shrink-0 bg-white" />
-                    ) : step.active ? (
-                      <div className="w-6 h-6 rounded-full border-2 border-blue-500 bg-blue-50 flex items-center justify-center flex-shrink-0">
-                        <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                {TIMELINE_STAGES.map((stage, i) => {
+                  const isDone = i < currentStageIdx;
+                  const isActive = i === currentStageIdx;
+                  return (
+                    <div key={stage.key} className="flex items-start gap-4">
+                      {isDone ? (
+                        <CheckCircle2 className="w-6 h-6 text-green-500 flex-shrink-0 bg-white" />
+                      ) : isActive ? (
+                        <div className="w-6 h-6 rounded-full border-2 border-blue-500 bg-blue-50 flex items-center justify-center flex-shrink-0">
+                          <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                        </div>
+                      ) : (
+                        <CircleDashed className="w-6 h-6 text-gray-300 flex-shrink-0 bg-white" />
+                      )}
+                      <div>
+                        <p className={cn(
+                          "text-sm font-semibold leading-snug",
+                          isDone ? "text-gray-900" : isActive ? "text-blue-700" : "text-gray-400"
+                        )}>
+                          {stage.label}
+                        </p>
+                        {isActive && (
+                          <p className="text-xs text-blue-500 mt-0.5">Sedang berlangsung…</p>
+                        )}
                       </div>
-                    ) : (
-                      <CircleDashed className="w-6 h-6 text-gray-300 flex-shrink-0 bg-white" />
-                    )}
-                    <div>
-                      <p className={cn(
-                        "text-sm font-semibold leading-snug",
-                        step.done ? "text-gray-900" : step.active ? "text-blue-700" : "text-gray-400"
-                      )}>
-                        {step.label}
-                      </p>
-                      <p className="text-xs text-gray-500 mt-0.5">{step.desc}</p>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
+
+            {/* Pool ID on-chain */}
+            {pool.smartContractAddr && (
+              <div className="mt-6 pt-4 border-t border-gray-100">
+                <p className="text-xs text-gray-500 mb-1">Contract Stellar</p>
+                <a
+                  href={getStellarExpertUrl(pool.smartContractAddr, "account")}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs font-mono text-blue-600 hover:underline flex items-center gap-1"
+                >
+                  {pool.smartContractAddr.slice(0, 12)}…
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -188,7 +270,7 @@ function DetailContent() {
 
 export default function MonitoringDetailPage() {
   return (
-    <Suspense fallback={<div className="text-sm text-gray-400 p-8">Loading...</div>}>
+    <Suspense fallback={<div className="flex items-center justify-center py-16 text-gray-400 gap-2"><Loader2 className="w-5 h-5 animate-spin" /> Loading…</div>}>
       <DetailContent />
     </Suspense>
   );

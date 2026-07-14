@@ -2,21 +2,21 @@
 
 import { cn } from "@/lib/utils";
 import {
-  LayoutDashboard,
   Store,
   Settings,
   Bell,
   Search,
   LogOut,
-  ChevronDown,
   LineChart,
-  PieChart,
   Briefcase,
   Vote,
-  BadgeCheck
+  BadgeCheck,
+  Wallet,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
+import { useStellarWallet } from "@/lib/stellar/context";
+import { WalletButton } from "@/components/ui/wallet-button";
 
 const MENUS = [
   { label: "Marketplace", icon: Store, href: "/investor/dashboard/marketplace" },
@@ -25,6 +25,51 @@ const MENUS = [
   { label: "Governance", icon: Vote, href: "/investor/dashboard/governance" },
   { label: "Pengaturan", icon: Settings, href: "/investor/dashboard/settings" },
 ];
+
+function WalletSection() {
+  const { isConnected, publicKey, xlmBalance, connect, disconnect, isConnecting, isFreighterInstalled: installed } =
+    useStellarWallet();
+
+  if (isConnected && publicKey) {
+    return (
+      <div className="space-y-2">
+        <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+          <div className="w-8 h-8 bg-blue-100 text-blue-700 font-bold rounded-full flex items-center justify-center text-xs ring-2 ring-white shrink-0">
+            <Wallet className="w-4 h-4" />
+          </div>
+          <div className="overflow-hidden min-w-0">
+            <div className="flex items-center gap-1">
+              <p className="text-xs font-mono text-gray-800 truncate">
+                {publicKey.slice(0, 6)}…{publicKey.slice(-4)}
+              </p>
+              <BadgeCheck className="w-3 h-3 text-blue-500 flex-shrink-0" />
+            </div>
+            <p className="text-[10px] text-gray-500">{xlmBalance.toFixed(2)} XLM · Freighter</p>
+          </div>
+        </div>
+        <button
+          onClick={disconnect}
+          className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-gray-500 hover:text-red-600 hover:bg-red-50 w-full transition-colors group"
+        >
+          <LogOut className="w-4 h-4 text-gray-400 group-hover:text-red-500 transition-colors" />
+          Disconnect Wallet
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <WalletButton variant="outline" className="w-full justify-center" />
+      <Link href="/investor/login">
+        <button className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-gray-500 hover:text-red-600 hover:bg-red-50 w-full transition-colors group">
+          <LogOut className="w-4 h-4 text-gray-400 group-hover:text-red-500 transition-colors" />
+          Keluar
+        </button>
+      </Link>
+    </div>
+  );
+}
 
 export default function InvestorDashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -77,24 +122,7 @@ export default function InvestorDashboardLayout({ children }: { children: React.
         </div>
 
         <div className="p-4 border-t border-gray-100">
-          <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl mb-4">
-            <div className="w-10 h-10 bg-blue-100 text-blue-700 font-bold rounded-full flex items-center justify-center text-sm ring-2 ring-white">
-              JD
-            </div>
-            <div className="overflow-hidden">
-              <div className="flex items-center gap-1">
-                <p className="text-sm font-semibold text-gray-900 truncate">John Doe</p>
-                <BadgeCheck className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
-              </div>
-              <p className="text-xs text-gray-500 truncate">Verified Investor</p>
-            </div>
-          </div>
-          <Link href="/investor/login">
-            <button className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-500 hover:text-red-600 hover:bg-red-50 w-full transition-colors group">
-              <LogOut className="w-4 h-4 text-gray-400 group-hover:text-red-500 transition-colors" />
-              Keluar
-            </button>
-          </Link>
+          <WalletSection />
         </div>
       </aside>
 

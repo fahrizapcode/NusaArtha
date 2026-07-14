@@ -3,12 +3,16 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Check, UploadCloud } from "lucide-react";
+import { Check, UploadCloud, Wallet } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
+import { submitBrandRegistration } from "./actions";
+import { useStellarWallet } from "@/lib/stellar/context";
+import { WalletButton } from "@/components/ui/wallet-button";
 
 export default function RegisterBrandPage() {
   const router = useRouter();
+  const { isConnected, publicKey } = useStellarWallet();
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     brandName: "",
@@ -35,7 +39,23 @@ export default function RegisterBrandPage() {
 
   const handleNext = () => setStep((s) => Math.min(s + 1, 3));
   const handlePrev = () => setStep((s) => Math.max(s - 1, 1));
-  const handleSubmit = () => router.push("/dashboard");
+
+  const handleSubmit = async () => {
+    const res = await submitBrandRegistration({
+      ...formData,
+      walletAddress: publicKey || undefined,
+    });
+    if (res.success) {
+      alert(
+        `Brand berhasil didaftarkan!\nSkor Kesiapan: ${res.score}/100\nLevel: ${res.level}\n${
+          res.notes?.length ? "\nCatatan:\n" + res.notes.join("\n") : ""
+        }`
+      );
+      router.push("/review/pending");
+    } else {
+      alert("Gagal: " + res.error);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center py-12 px-4 font-sans">
@@ -77,6 +97,26 @@ export default function RegisterBrandPage() {
             </div>
           ))}
         </div>
+
+        {/* Wallet connection banner */}
+        {!isConnected && (
+          <div className="mb-6 bg-amber-50 border border-amber-200 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            <div className="flex items-start gap-3 flex-1">
+              <Wallet className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-amber-800">
+                Hubungkan <strong>Freighter Wallet</strong> untuk menautkan brand ke alamat Stellar Anda.
+              </p>
+            </div>
+            <WalletButton size="sm" className="flex-shrink-0" />
+          </div>
+        )}
+        {isConnected && publicKey && (
+          <div className="mb-6 bg-green-50 border border-green-200 rounded-2xl px-4 py-3 flex items-center gap-3 text-sm text-green-800">
+            <Wallet className="w-4 h-4 flex-shrink-0" />
+            Wallet terhubung:{" "}
+            <span className="font-mono text-xs">{publicKey.slice(0, 8)}…{publicKey.slice(-6)}</span>
+          </div>
+        )}
 
         {/* Form Content */}
         <div className="bg-white rounded-[16px] shadow-sm border border-gray-200 overflow-hidden">

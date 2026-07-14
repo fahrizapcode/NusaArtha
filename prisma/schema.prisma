@@ -1,0 +1,100 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+// SQLite doesn't support enums, so we use String fields instead
+// Role: BRAND_OWNER, ADMIN, INVESTOR, OPERATOR
+// BrandLevel: EMERGING, MEZZANINE, MATURE, HIGH_RISK, PENDING
+// PoolStatus: DRAFT, PUBLISHED, ACTIVE, OPERATING, COMPLETED
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  passwordHash  String?
+  role          String    @default("INVESTOR") // BRAND_OWNER, ADMIN, INVESTOR, OPERATOR
+  walletAddress String?   @unique
+  isKYCVerified Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  brand         Brand?
+  investments   Investment[]
+  operatedOutlets Outlet[]
+}
+
+model Brand {
+  id                String      @id @default(cuid())
+  ownerId           String      @unique
+  owner             User        @relation(fields: [ownerId], references: [id])
+  name              String
+  businessType      String
+  legalDocsCID      String?     // IPFS hash
+  sopDocsCID        String?     // IPFS hash
+  readinessScore    Int?
+  riskLevel         String      @default("PENDING") // EMERGING, MEZZANINE, MATURE, HIGH_RISK, PENDING
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  
+  pools             InvestmentPool[]
+}
+
+model InvestmentPool {
+  id                String      @id @default(cuid())
+  brandId           String
+  brand             Brand       @relation(fields: [brandId], references: [id])
+  name              String
+  location          String
+  targetFunding     Float
+  totalSupply       Int
+  pricePerToken     Float
+  revenueShares     String      @default("{\"investor\":40,\"brand\":30,\"operator\":20,\"platform\":10}") // JSON as string
+  status            String      @default("DRAFT") // DRAFT, PUBLISHED, ACTIVE, OPERATING, COMPLETED
+  smartContractAddr String?
+  disclosureCID     String?     // IPFS hash
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  outlets           Outlet[]
+  investments       Investment[]
+}
+
+model Outlet {
+  id                String         @id @default(cuid())
+  poolId            String
+  pool              InvestmentPool @relation(fields: [poolId], references: [id])
+  operatorId        String?
+  operator          User?          @relation(fields: [operatorId], references: [id])
+  name              String
+  location          String
+  status            String
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  posTransactions   PosTransaction[]
+}
+
+model Investment {
+  id                String         @id @default(cuid())
+  investorId        String
+  investor          User           @relation(fields: [investorId], references: [id])
+  poolId            String
+  pool              InvestmentPool @relation(fields: [poolId], references: [id])
+  tokensOwned       Int
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+}
+
+model PosTransaction {
+  id                String   @id @default(cuid())
+  outletId          String
+  outlet            Outlet   @relation(fields: [outletId], references: [id])
+  amount            Float
+  items             String   @default("{}") // JSON as string
+  timestamp         DateTime @default(now())
+}

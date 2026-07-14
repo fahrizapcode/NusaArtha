@@ -13,8 +13,8 @@ import {
   Phone,
   User,
 } from "lucide-react";
-import { Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useState, useEffect, useCallback, Suspense } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 
 const STATUS_CONFIG: Record<string, { label: string; class: string }> = {
   active: { label: "Beroperasi", class: "bg-green-50 text-green-700 border border-green-200" },
@@ -87,10 +87,57 @@ const DUMMY_OUTLETS = [
 
 function OutletContent() {
   const searchParams = useSearchParams();
-  const status = searchParams.get("status");
+  const router = useRouter();
+  const [outlets, setOutlets] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const activeCount = DUMMY_OUTLETS.filter((o) => o.status === "active").length;
-  const buildingCount = DUMMY_OUTLETS.filter((o) => o.status === "building").length;
+  const load = useCallback(async () => {
+    try {
+      const meRes = await fetch("/api/auth/me");
+      if (!meRes.ok) {
+        router.push("/login");
+        return;
+      }
+      const me = await meRes.json();
+      const res = await fetch(`/api/dashboard/brand?ownerId=${me.user.id}`);
+      const data = await res.json();
+      
+      const allOutlets: any[] = [];
+      if (data.pools) {
+        data.pools.forEach((p: any) => {
+          // If the pool has outlets, map them
+          // Since our api/dashboard/brand might only return minimal outlet data,
+          // let's create a placeholder based on the pool if it has operating outlets
+          allOutlets.push({
+            name: `${p.name} Outlet`,
+            package: `Pool ${p.name}`,
+            location: p.location,
+            city: p.location.split(',').pop() || p.location,
+            openDate: p.status === "OPERATING" ? "Sedang Beroperasi" : "Menunggu",
+            pic: "Operator Assigned",
+            phone: "-",
+            status: p.status === "OPERATING" ? "active" : "building",
+            monthlyRevenue: "Rp 0",
+            growth: "0%",
+          });
+        });
+      }
+      setOutlets(allOutlets);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  }, [router]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const activeCount = outlets.filter((o) => o.status === "active").length;
+  const buildingCount = outlets.filter((o) => o.status === "building").length;
+
+  if (loading) {
+    return <div className="text-center py-20 text-gray-500">Memuat outlet...</div>;
+  }
 
   return (
     <div className="max-w-[1100px] mx-auto space-y-6">
@@ -115,7 +162,7 @@ function OutletContent() {
             <Building2 className="w-4 h-4 text-blue-600" />
           </div>
           <div>
-            <p className="text-xl font-bold text-gray-900 leading-none">{DUMMY_OUTLETS.length}</p>
+            <p className="text-xl font-bold text-gray-900 leading-none">{outlets.length}</p>
             <p className="text-xs text-gray-500 mt-0.5">Total Outlet</p>
           </div>
         </div>
@@ -173,12 +220,12 @@ function OutletContent() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {DUMMY_OUTLETS.map((outlet, i) => (
+              {outlets.map((outlet, i) => (
                 <tr key={i} className="hover:bg-gray-50/50 transition-colors">
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 bg-blue-100 text-blue-700 rounded-xl flex items-center justify-center text-xs font-bold flex-shrink-0">
-                        {outlet.name.charAt(7)}
+                        {outlet.name.charAt(0)}
                       </div>
                       <div>
                         <p className="font-semibold text-gray-900">{outlet.name}</p>
@@ -228,7 +275,7 @@ function OutletContent() {
           </table>
         </div>
         <div className="px-5 py-3 border-t border-gray-100 bg-gray-50/40 flex items-center justify-between">
-          <span className="text-xs text-gray-500">{DUMMY_OUTLETS.length} outlet ditemukan</span>
+          <span className="text-xs text-gray-500">{outlets.length} outlet ditemukan</span>
         </div>
       </div>
     </div>

@@ -108,7 +108,7 @@ export function Navbar() {
             {/* Language Switcher */}
             <LanguageSwitcher language={language} setLanguage={setLanguage} />
 
-            <Button variant="outline" className="font-semibold">
+            <Button variant="outline" className="font-semibold" onClick={() => window.location.href = '/login'}>
               {t("Masuk", "Sign In")}
             </Button>
             <Button className="font-semibold" onClick={() => window.location.href = '/register-brand'}>
@@ -159,7 +159,7 @@ export function Navbar() {
                 );
               })}
               <div className="flex flex-col gap-3 mt-4">
-                <Button variant="outline" className="w-full justify-center">
+                <Button variant="outline" className="w-full justify-center" onClick={() => window.location.href = '/login'}>
                   {t("Masuk", "Sign In")}
                 </Button>
                 <Button className="w-full justify-center" onClick={() => window.location.href = '/register-brand'}>
