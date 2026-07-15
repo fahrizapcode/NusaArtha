@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import { WalletButton } from "@/components/ui/wallet-button";
 import { cn } from "@/lib/utils";
 import {
-  Search, Filter, BadgeCheck, MapPin, Users, Clock,
-  ChevronRight, TrendingUp, ShieldCheck, Star, Loader2,
+  Search, BadgeCheck, MapPin, Users, Clock,
+  ChevronRight, ShieldCheck, Loader2,
 } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect, useCallback } from "react";
@@ -23,7 +23,7 @@ type Campaign = {
   collectedNum: number;
   progress: number;
   investors: number;
-  daysLeft: number;
+  daysLeft: number | null;
   readinessScore: number;
   risk: string;
   roi: string;
@@ -73,6 +73,13 @@ export default function MarketplacePage() {
         const fmt = (n: number) =>
           new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(n);
 
+        // Calculate days left from endDate if available
+        let daysLeft: number | null = null;
+        if (pool.endDate) {
+          const diff = Math.ceil((new Date(pool.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+          daysLeft = Math.max(0, diff);
+        }
+
         return {
           id: pool.id,
           brandName: pool.brand.name,
@@ -85,11 +92,11 @@ export default function MarketplacePage() {
           collectedNum: collected,
           progress,
           investors: new Set(pool.investments.map((i: any) => i.investorId)).size,
-          daysLeft: 30,
+          daysLeft,
           readinessScore: pool.brand.readinessScore || 0,
           risk: pool.brand.riskLevel,
-          roi: "15-25%",
-          bep: "12-18 Bulan",
+          roi: pool.roiEstimate || "—",
+          bep: pool.bepEstimate || "—",
           tokenPrice: fmt(pool.pricePerToken),
           minPurchase: fmt(pool.pricePerToken),
           status: pool.status,
@@ -265,7 +272,11 @@ export default function MarketplacePage() {
                     </div>
                     <div className="flex items-center gap-1">
                       <Clock className="w-3.5 h-3.5" />
-                      <span>Sisa <span className={cn("font-semibold", campaign.daysLeft <= 7 ? "text-orange-600" : "text-gray-700")}>{campaign.daysLeft}</span> hr</span>
+                      {campaign.daysLeft === null ? (
+                        <span className="text-gray-500">Tidak ada batas</span>
+                      ) : (
+                        <span>Sisa <span className={cn("font-semibold", campaign.daysLeft <= 7 ? "text-orange-600" : "text-gray-700")}>{campaign.daysLeft}</span> hr</span>
+                      )}
                     </div>
                   </div>
                 </div>

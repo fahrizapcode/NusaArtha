@@ -58,6 +58,7 @@ export default function BrandDetailPage() {
   const [poolForm, setPoolForm] = useState({
     name: "", location: "", targetFunding: "", totalSupply: "1000", pricePerToken: "",
     investorShare: "40", brandShare: "30", operatorShare: "20", platformShare: "10",
+    endDate: "", roiEstimate: "", bepEstimate: "",
   });
   const [creatingPool, setCreatingPool] = useState(false);
   const [poolCreated, setPoolCreated] = useState(false);
@@ -86,7 +87,9 @@ export default function BrandDetailPage() {
       const data = await res.json();
       setBrand((prev) => prev ? { ...prev, ...data.brand } : prev);
       setSaved(true); setTimeout(() => setSaved(false), 2500);
-    } catch (e: any) { setError(e.message); } finally { setSaving(false); }
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Terjadi kesalahan");
+    } finally { setSaving(false); }
   };
 
   const handleDueDiligence = async (decision: "APPROVED" | "REVISION" | "REJECTED") => {
@@ -103,7 +106,9 @@ export default function BrandDetailPage() {
       setReadinessScore(data.brand.readinessScore || 0);
       setDDDecision(decision);
       setDDSaved(true); setTimeout(() => setDDSaved(false), 3000);
-    } catch (e: any) { setError(e.message); } finally { setDDSaving(false); }
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Terjadi kesalahan");
+    } finally { setDDSaving(false); }
   };
 
   const handleCreatePool = async () => {
@@ -117,7 +122,9 @@ export default function BrandDetailPage() {
       setPoolCreated(true); setShowCreatePool(false);
       const d = await fetch(`/api/brands/${brandId}`).then((r) => r.json());
       setBrand(d.brand);
-    } catch (e: any) { setError(e.message); } finally { setCreatingPool(false); }
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Terjadi kesalahan");
+    } finally { setCreatingPool(false); }
   };
 
   if (loading) return (
@@ -263,31 +270,34 @@ export default function BrandDetailPage() {
               {showCreatePool && (
                 <div className="border border-gray-100 rounded-xl p-4 mb-4 space-y-3 bg-gray-50">
                   <div className="grid sm:grid-cols-2 gap-3">
-                    {[
-                      { label: "Nama Pool", key: "name", placeholder: "Kopi Nusantara - BSD City" },
-                      { label: "Lokasi", key: "location", placeholder: "Jl. Pahlawan No. 12, BSD City" },
-                      { label: "Target Dana (Rp)", key: "targetFunding", type: "number", placeholder: "500000000" },
-                      { label: "Total Supply Token", key: "totalSupply", type: "number", placeholder: "1000" },
-                      { label: "Harga per Token (Rp)", key: "pricePerToken", type: "number", placeholder: "500000" },
-                    ].map(({ label, key, type, placeholder }) => (
+                    {([
+                      { label: "Nama Pool",                  key: "name"          as const, type: undefined,  placeholder: "Kopi Nusantara - BSD City" },
+                      { label: "Lokasi",                     key: "location"      as const, type: undefined,  placeholder: "Jl. Pahlawan No. 12, BSD City" },
+                      { label: "Target Dana (Rp)",           key: "targetFunding" as const, type: "number",   placeholder: "500000000" },
+                      { label: "Total Supply Token",         key: "totalSupply"   as const, type: "number",   placeholder: "1000" },
+                      { label: "Harga per Token (Rp)",       key: "pricePerToken" as const, type: "number",   placeholder: "500000" },
+                      { label: "Tanggal Berakhir Campaign",  key: "endDate"       as const, type: "date",     placeholder: "" },
+                      { label: "Est. ROI/Tahun",             key: "roiEstimate"   as const, type: undefined,  placeholder: "15-25%" },
+                      { label: "Est. BEP",                   key: "bepEstimate"   as const, type: undefined,  placeholder: "12-18 Bulan" },
+                    ] as const).map(({ label, key, type, placeholder }) => (
                       <div key={key}>
                         <label className="text-xs font-semibold text-gray-600 block mb-1">{label}</label>
-                        <input type={type || "text"} value={(poolForm as any)[key]} onChange={(e) => setPoolForm((f) => ({ ...f, [key]: e.target.value }))}
+                        <input type={type ?? "text"} value={poolForm[key]} onChange={(e) => setPoolForm((f) => ({ ...f, [key]: e.target.value }))}
                           placeholder={placeholder} className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" />
                       </div>
                     ))}
                   </div>
                   <p className="text-xs font-semibold text-gray-500 uppercase mt-2">Revenue Share (%)</p>
                   <div className="grid grid-cols-4 gap-2">
-                    {[
-                      { label: "Investor", key: "investorShare" },
-                      { label: "Brand", key: "brandShare" },
-                      { label: "Operator", key: "operatorShare" },
-                      { label: "Platform", key: "platformShare" },
-                    ].map(({ label, key }) => (
+                    {([
+                      { label: "Investor", key: "investorShare" as const },
+                      { label: "Brand",    key: "brandShare"    as const },
+                      { label: "Operator", key: "operatorShare" as const },
+                      { label: "Platform", key: "platformShare" as const },
+                    ] as const).map(({ label, key }) => (
                       <div key={key}>
                         <label className="text-[10px] font-semibold text-gray-500 block mb-1">{label}</label>
-                        <input type="number" value={(poolForm as any)[key]} onChange={(e) => setPoolForm((f) => ({ ...f, [key]: e.target.value }))}
+                        <input type="number" value={poolForm[key]} onChange={(e) => setPoolForm((f) => ({ ...f, [key]: e.target.value }))}
                           className="w-full px-2 py-1.5 bg-white border border-gray-200 rounded-lg text-sm text-center outline-none focus:ring-2 focus:ring-blue-500/20" />
                       </div>
                     ))}

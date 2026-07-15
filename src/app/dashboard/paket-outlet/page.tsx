@@ -6,7 +6,7 @@ import {
   PackagePlus, MapPin, ChevronRight, Search, Loader2,
   Building2, Banknote, TrendingUp, X, AlertCircle,
 } from "lucide-react";
-import { Suspense, useState, useEffect, useCallback } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -34,13 +34,11 @@ type Pool = {
 };
 
 function PaketOutletContent() {
-  const searchParams = useSearchParams();
   const router = useRouter();
-  const status = searchParams.get("status");
-  const isApproved = status === "approved";
 
   const [pools, setPools] = useState<Pool[]>([]);
   const [brandId, setBrandId] = useState<string | null>(null);
+  const [isApproved, setIsApproved] = useState(false);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
@@ -53,22 +51,33 @@ function PaketOutletContent() {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const meRes = await fetch("/api/auth/me");
-      if (!meRes.ok) { router.push("/login"); return; }
-      const me = await meRes.json();
+  useEffect(() => {
+    let cancelled = false;
 
-      const res = await fetch(`/api/dashboard/brand?ownerId=${me.user.id}`);
-      const data = await res.json();
-      if (data.brand) setBrandId(data.brand.id);
-      setPools(data.pools || []);
-    } catch (e) { console.error(e); }
-    finally { setLoading(false); }
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const meRes = await fetch("/api/auth/me");
+        if (!meRes.ok) { router.push("/login"); return; }
+        const me = await meRes.json();
+
+        const res = await fetch(`/api/dashboard/brand?ownerId=${me.user.id}`);
+        const data = await res.json();
+        if (!cancelled) {
+          if (data.brand) setBrandId(data.brand.id);
+          if (data.stats) setIsApproved(data.stats.isApproved);
+          setPools(data.pools || []);
+        }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    fetchData();
+    return () => { cancelled = true; };
   }, [router]);
-
-  useEffect(() => { load(); }, [load]);
 
   const filtered = pools.filter((p) =>
     !search || p.name.toLowerCase().includes(search.toLowerCase()) || p.location.toLowerCase().includes(search.toLowerCase())
@@ -111,9 +120,11 @@ function PaketOutletContent() {
 
       setShowForm(false);
       setForm({ name: "", location: "", targetFunding: "", totalSupply: "", pricePerToken: "", investorShare: "40", brandShare: "30", operatorShare: "20", platformShare: "10" });
-      await load(); // Reload pools
-    } catch (err: any) {
-      setFormError(err.message);
+      // Reload pools after create
+      const reload = await fetch("/api/dashboard/brand").then((r) => r.json()).catch(() => null);
+      if (reload?.pools) setPools(reload.pools);
+    } catch (err: unknown) {
+      setFormError(err instanceof Error ? err.message : "Terjadi kesalahan");
     } finally {
       setSubmitting(false);
     }
@@ -377,16 +388,16 @@ function PaketOutletContent() {
                       </label>
                       <div className="grid grid-cols-4 gap-2">
                         {[
-                          { key: "investorShare", label: "Investor" },
-                          { key: "brandShare", label: "Brand" },
-                          { key: "operatorShare", label: "Operator" },
-                          { key: "platformShare", label: "Platform" },
+                          { key: "investorShare" as keyof typeof form, label: "Investor" },
+                          { key: "brandShare"    as keyof typeof form, label: "Brand" },
+                          { key: "operatorShare" as keyof typeof form, label: "Operator" },
+                          { key: "platformShare" as keyof typeof form, label: "Platform" },
                         ].map((f) => (
                           <div key={f.key}>
                             <label className="text-[10px] text-gray-500 block mb-1">{f.label} (%)</label>
                             <input
                               type="number" min="0" max="100"
-                              value={(form as any)[f.key]}
+                              value={form[f.key]}
                               onChange={(e) => setForm((prev) => ({ ...prev, [f.key]: e.target.value }))}
                               className="w-full px-2 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-center outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                             />

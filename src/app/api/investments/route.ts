@@ -36,7 +36,18 @@ export async function GET(request: Request) {
       orderBy: { createdAt: "desc" },
     });
 
-    return NextResponse.json({ investments });
+    const groupedInvestments = Object.values(
+      investments.reduce((acc, inv) => {
+        if (!acc[inv.poolId]) {
+          acc[inv.poolId] = { ...inv };
+        } else {
+          acc[inv.poolId].tokensOwned += inv.tokensOwned;
+        }
+        return acc;
+      }, {} as Record<string, typeof investments[0]>)
+    );
+
+    return NextResponse.json({ investments: groupedInvestments });
   } catch (err) {
     console.error("[GET /api/investments]", err);
     return NextResponse.json({ error: "Failed to fetch investments" }, { status: 500 });

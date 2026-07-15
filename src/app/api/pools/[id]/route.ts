@@ -69,12 +69,20 @@ export async function PATCH(
       "totalSupply",
       "pricePerToken",
       "revenueShares",
+      "endDate",
+      "roiEstimate",
+      "bepEstimate",
     ];
     const updateData: Record<string, any> = {};
     for (const key of allowed) {
       if (body[key] !== undefined) {
-        updateData[key] =
-          key === "revenueShares" ? JSON.stringify(body[key]) : body[key];
+        if (key === "revenueShares") {
+          updateData[key] = JSON.stringify(body[key]);
+        } else if (key === "endDate") {
+          updateData[key] = body[key] ? new Date(body[key]) : null;
+        } else {
+          updateData[key] = body[key];
+        }
       }
     }
 

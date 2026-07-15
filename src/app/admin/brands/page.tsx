@@ -24,12 +24,23 @@ const STATUS_LABEL: Record<string, string> = {
 export default async function AdminBrandsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ filter?: string }>;
+  searchParams: Promise<{ filter?: string; q?: string }>;
 }) {
   const params = await searchParams;
   const filter = params.filter || "all";
+  const q = params.q?.trim() || "";
 
   const brands = await prisma.brand.findMany({
+    where: q
+      ? {
+          OR: [
+            { name: { contains: q } },
+            { businessType: { contains: q } },
+            { owner: { name: { contains: q } } },
+            { owner: { email: { contains: q } } },
+          ],
+        }
+      : undefined,
     include: { owner: true, pools: { select: { id: true, status: true } } },
     orderBy: { createdAt: "desc" },
   });
@@ -58,14 +69,17 @@ export default async function AdminBrandsPage({
 
       {/* Filter */}
       <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-        <div className="relative w-full sm:w-72">
+        <form method="GET" className="relative w-full sm:w-72">
           <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
+            name="q"
+            defaultValue={q}
             placeholder="Cari brand..."
             className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-400 shadow-sm"
           />
-        </div>
+          {params.filter && <input type="hidden" name="filter" value={params.filter} />}
+        </form>
         <BrandFilterTabs counts={counts} />
       </div>
 

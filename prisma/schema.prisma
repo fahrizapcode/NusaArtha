@@ -79,6 +79,9 @@ model InvestmentPool {
   status            String      @default("DRAFT") // DRAFT, PUBLISHED, ACTIVE, OPERATING, COMPLETED
   smartContractAddr String?
   disclosureCID     String?     // IPFS hash
+  endDate           DateTime?   // Campaign end date for fundraising
+  roiEstimate       String?     // e.g. "15-25%"
+  bepEstimate       String?     // e.g. "12-18 Bulan"
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
 

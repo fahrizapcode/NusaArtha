@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import {
   TrendingUp, Award, Star, Loader2, AlertCircle,
-  CheckCircle2, Target, Banknote, Info, ArrowRight,
+  CheckCircle2, Target, Banknote, Info,
 } from "lucide-react";
 
 type ScoreResult = {

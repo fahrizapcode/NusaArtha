@@ -22,6 +22,7 @@ type PoolSummary = {
   progress: number;
   investors: number;
   smartContractAddr?: string;
+  endDate?: string | null;
 };
 
 const STATUS_CONFIG: Record<string, { label: string; cls: string }> = {
@@ -203,10 +204,20 @@ export default function MonitoringPage() {
                       <Clock className="w-4 h-4" />
                       <span className="font-semibold">Pendanaan selesai</span>
                     </div>
+                  ) : pkg.endDate ? (
+                    <div className="flex items-center gap-1.5">
+                      <Clock className="w-4 h-4 text-gray-400" />
+                      {(() => {
+                        const daysLeft = Math.max(0, Math.ceil((new Date(pkg.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+                        return (
+                          <span>Sisa <span className={cn("font-semibold", daysLeft <= 7 ? "text-orange-600" : "text-gray-700")}>{daysLeft}</span> hari</span>
+                        );
+                      })()}
+                    </div>
                   ) : (
                     <div className="flex items-center gap-1.5">
                       <Clock className="w-4 h-4 text-gray-400" />
-                      <span>Sisa <span className="font-semibold text-gray-700">30</span> hari</span>
+                      <span className="text-gray-400 text-sm">Tidak ada batas waktu</span>
                     </div>
                   )}
                 </div>

@@ -69,6 +69,8 @@ export async function GET(request: Request) {
         progress,
         investors: new Set(p.investments.map((i: any) => i.investorId)).size,
         outlets: p.outlets.length,
+        endDate: p.endDate?.toISOString() || null,
+        smartContractAddr: p.smartContractAddr || null,
       };
     });
 

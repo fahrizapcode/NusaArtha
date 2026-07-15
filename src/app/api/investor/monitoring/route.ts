@@ -18,7 +18,6 @@ export async function GET() {
 
     const userId = payload.id as string;
 
-    // Get all investment pools the investor has invested in
     const investments = await prisma.investment.findMany({
       where: { investorId: userId },
       include: {
@@ -40,13 +39,24 @@ export async function GET() {
       },
     });
 
-    const poolsData = investments.map((inv) => {
+    // Group investments by pool to prevent duplicate keys if investor made multiple investments in same pool
+    const groupedInvestments = Object.values(
+      investments.reduce((acc, inv) => {
+        if (!acc[inv.poolId]) {
+          acc[inv.poolId] = { ...inv, totalTokensOwned: 0 };
+        }
+        acc[inv.poolId].totalTokensOwned += inv.tokensOwned;
+        return acc;
+      }, {} as Record<string, typeof investments[0] & { totalTokensOwned: number }>)
+    );
+
+    const poolsData = groupedInvestments.map((inv) => {
       const pool = inv.pool;
       const totalTokens = investments
         .filter((i) => i.poolId === pool.id)
         .reduce((s, i) => s + i.tokensOwned, 0);
       const myOwnershipPct = totalTokens > 0
-        ? ((inv.tokensOwned / pool.totalSupply) * 100).toFixed(2)
+        ? ((inv.totalTokensOwned / pool.totalSupply) * 100).toFixed(2)
         : "0.00";
 
       const outletsData = pool.outlets.map((outlet) => {
@@ -115,7 +125,7 @@ export async function GET() {
       const totalMonthRevenue = outletsData.reduce((s, o) => s + o.monthRevenue, 0);
       const myMonthlyEstimate =
         (totalMonthRevenue * shares.investor) / 100 *
-        (inv.tokensOwned / Math.max(pool.totalSupply, 1));
+        (inv.totalTokensOwned / Math.max(pool.totalSupply, 1));
 
       return {
         poolId: pool.id,
@@ -123,7 +133,7 @@ export async function GET() {
         location: pool.location,
         brandName: pool.brand.name,
         status: pool.status,
-        tokensOwned: inv.tokensOwned,
+        tokensOwned: inv.totalTokensOwned,
         totalSupply: pool.totalSupply,
         myOwnershipPct,
         revenueShares: shares,

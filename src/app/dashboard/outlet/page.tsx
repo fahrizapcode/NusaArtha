@@ -1,20 +1,19 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
-  MapPin, Search, Filter, MoreHorizontal, Building2,
-  TrendingUp, Plus, User, Loader2, Store,
+  MapPin, Search, MoreHorizontal, Building2,
+  User, Loader2, Store,
 } from "lucide-react";
-import { useState, useEffect, useCallback, Suspense } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter } from "next/navigation";
 
 const STATUS_CONFIG: Record<string, { label: string; class: string }> = {
-  ACTIVE: { label: "Beroperasi", class: "bg-green-50 text-green-700 border border-green-200" },
-  OPERATING: { label: "Beroperasi", class: "bg-green-50 text-green-700 border border-green-200" },
-  BUILDING: { label: "Sedang Dibangun", class: "bg-orange-50 text-orange-700 border border-orange-200" },
-  PENDING: { label: "Menunggu", class: "bg-amber-50 text-amber-700 border border-amber-200" },
-  CLOSED: { label: "Tutup", class: "bg-red-50 text-red-600 border border-red-200" },
+  ACTIVE:    { label: "Beroperasi",      class: "bg-green-50 text-green-700 border border-green-200" },
+  OPERATING: { label: "Beroperasi",      class: "bg-green-50 text-green-700 border border-green-200" },
+  BUILDING:  { label: "Sedang Dibangun", class: "bg-orange-50 text-orange-700 border border-orange-200" },
+  PENDING:   { label: "Menunggu",        class: "bg-amber-50 text-amber-700 border border-amber-200" },
+  CLOSED:    { label: "Tutup",           class: "bg-red-50 text-red-600 border border-red-200" },
 };
 
 type OutletRow = {
@@ -30,36 +29,42 @@ type OutletRow = {
 };
 
 function OutletContent() {
-  const searchParams = useSearchParams();
   const router = useRouter();
   const [outlets, setOutlets] = useState<OutletRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
 
-  const load = useCallback(async () => {
-    try {
-      const meRes = await fetch("/api/auth/me");
-      if (!meRes.ok) { router.push("/login"); return; }
-      const me = await meRes.json();
+  useEffect(() => {
+    let cancelled = false;
 
-      // Fetch all outlets via pools that belong to this brand
-      const res = await fetch(`/api/outlets?ownerId=${me.user.id}`);
-      if (!res.ok) throw new Error("API error");
-      const data = await res.json();
-      setOutlets(data.outlets || []);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
+    const fetchData = async () => {
+      try {
+        const meRes = await fetch("/api/auth/me");
+        if (!meRes.ok) { router.push("/login"); return; }
+        const me = await meRes.json();
+
+        const res = await fetch(`/api/outlets?ownerId=${me.user.id}`);
+        if (!res.ok) throw new Error("API error");
+        const data = await res.json();
+        if (!cancelled) setOutlets(data.outlets || []);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    fetchData();
+    return () => { cancelled = true; };
   }, [router]);
 
-  useEffect(() => { load(); }, [load]);
-
   const filtered = outlets.filter(
-    (o) => !search || o.name.toLowerCase().includes(search.toLowerCase()) || o.city.toLowerCase().includes(search.toLowerCase())
+    (o) =>
+      !search ||
+      o.name.toLowerCase().includes(search.toLowerCase()) ||
+      o.city.toLowerCase().includes(search.toLowerCase()),
   );
-  const activeCount = outlets.filter((o) => ["ACTIVE", "OPERATING"].includes(o.status)).length;
+  const activeCount   = outlets.filter((o) => ["ACTIVE", "OPERATING"].includes(o.status)).length;
   const buildingCount = outlets.filter((o) => ["BUILDING", "PENDING"].includes(o.status)).length;
 
   if (loading) {
@@ -83,13 +88,13 @@ function OutletContent() {
       {/* Summary */}
       <div className="flex flex-wrap gap-3">
         {[
-          { label: "Total Outlet", value: outlets.length, color: "bg-blue-50", icon: Building2, iconColor: "text-blue-600" },
-          { label: "Beroperasi", value: activeCount, color: "bg-green-50", icon: Building2, iconColor: "text-green-600" },
-          { label: "Dibangun", value: buildingCount, color: "bg-orange-50", icon: Building2, iconColor: "text-orange-500" },
+          { label: "Total Outlet",  value: outlets.length, color: "bg-blue-50",   iconColor: "text-blue-600"  },
+          { label: "Beroperasi",    value: activeCount,    color: "bg-green-50",  iconColor: "text-green-600" },
+          { label: "Dibangun",      value: buildingCount,  color: "bg-orange-50", iconColor: "text-orange-500" },
         ].map((s, i) => (
           <div key={i} className="bg-white border border-gray-100 shadow-sm rounded-2xl px-5 py-3 flex items-center gap-3">
             <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center", s.color)}>
-              <s.icon className={cn("w-4 h-4", s.iconColor)} />
+              <Building2 className={cn("w-4 h-4", s.iconColor)} />
             </div>
             <div>
               <p className="text-xl font-bold text-gray-900 leading-none">{s.value}</p>
@@ -155,7 +160,8 @@ function OutletContent() {
                           <div>
                             <p className="font-semibold text-gray-900">{outlet.name}</p>
                             <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
-                              <MapPin className="w-3 h-3" />{outlet.location.slice(0, 30)}{outlet.location.length > 30 ? "…" : ""}
+                              <MapPin className="w-3 h-3" />
+                              {outlet.location.slice(0, 30)}{outlet.location.length > 30 ? "…" : ""}
                             </p>
                           </div>
                         </div>
@@ -174,7 +180,9 @@ function OutletContent() {
                       </td>
                       <td className="px-5 py-4 text-gray-600 hidden lg:table-cell">{outlet.openDate}</td>
                       <td className="px-5 py-4 font-medium text-gray-800">
-                        {outlet.monthlyRevenue > 0 ? `Rp ${(outlet.monthlyRevenue / 1e6).toFixed(1)}Jt` : "—"}
+                        {outlet.monthlyRevenue > 0
+                          ? `Rp ${(outlet.monthlyRevenue / 1e6).toFixed(1)}Jt`
+                          : "—"}
                       </td>
                       <td className="px-5 py-4">
                         <span className={cn("text-[11px] font-semibold px-2.5 py-1 rounded-full", cfg.class)}>
@@ -203,7 +211,13 @@ function OutletContent() {
 
 export default function OutletPage() {
   return (
-    <Suspense fallback={<div className="text-sm text-gray-400 p-8 flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" />Loading...</div>}>
+    <Suspense
+      fallback={
+        <div className="text-sm text-gray-400 p-8 flex items-center gap-2">
+          <Loader2 className="w-4 h-4 animate-spin" />Loading...
+        </div>
+      }
+    >
       <OutletContent />
     </Suspense>
   );

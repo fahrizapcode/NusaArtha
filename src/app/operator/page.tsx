@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
   Store, TrendingUp, Banknote, Activity, Loader2,
-  MapPin, CheckCircle2, AlertCircle, ArrowRight,
+  MapPin, AlertCircle, ArrowRight,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -33,36 +33,40 @@ export default function OperatorDashboard() {
   const [outlets, setOutlets] = useState<OutletData[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const load = useCallback(async () => {
-    try {
-      const meRes = await fetch("/api/auth/me");
-      if (!meRes.ok) { router.push("/login"); return; }
-      const me = await meRes.json();
+  useEffect(() => {
+    let cancelled = false;
 
-      if (me.user.role !== "OPERATOR") {
-        // Redirect ke dashboard yang sesuai
-        if (me.user.role === "ADMIN") router.push("/admin");
-        else if (me.user.role === "BRAND_OWNER") router.push("/dashboard");
-        else router.push("/investor/dashboard/marketplace");
-        return;
+    const fetchData = async () => {
+      try {
+        const meRes = await fetch("/api/auth/me");
+        if (!meRes.ok) { router.push("/login"); return; }
+        const me = await meRes.json();
+
+        if (me.user.role !== "OPERATOR") {
+          if (me.user.role === "ADMIN") router.push("/admin");
+          else if (me.user.role === "BRAND_OWNER") router.push("/dashboard");
+          else router.push("/investor/dashboard/marketplace");
+          return;
+        }
+
+        if (cancelled) return;
+        setProfile(me.user);
+
+        const res = await fetch(`/api/operator/outlets?operatorId=${me.user.id}`);
+        if (res.ok && !cancelled) {
+          const data = await res.json();
+          setOutlets(data.outlets || []);
+        }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
+    };
 
-      setProfile(me.user);
-
-      // Fetch outlets yang dioperasikan
-      const res = await fetch(`/api/operator/outlets?operatorId=${me.user.id}`);
-      if (res.ok) {
-        const data = await res.json();
-        setOutlets(data.outlets || []);
-      }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
+    fetchData();
+    return () => { cancelled = true; };
   }, [router]);
-
-  useEffect(() => { load(); }, [load]);
 
   if (loading) {
     return (

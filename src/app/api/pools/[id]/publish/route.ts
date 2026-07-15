@@ -36,6 +36,9 @@ export async function POST(
       totalSupply: pool.totalSupply,
       pricePerToken: pool.pricePerToken,
       revenueShares: JSON.parse(pool.revenueShares),
+      endDate: pool.endDate?.toISOString() || null,
+      roiEstimate: pool.roiEstimate || null,
+      bepEstimate: pool.bepEstimate || null,
       publishedAt: new Date().toISOString(),
       adminNote: body.note || "",
     };

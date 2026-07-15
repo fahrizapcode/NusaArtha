@@ -29,6 +29,9 @@ export async function POST(request: Request) {
       brandShare,
       operatorShare,
       platformShare,
+      endDate,
+      roiEstimate,
+      bepEstimate,
     } = body;
 
     if (!brandId || !name || !location || !targetFunding || !totalSupply || !pricePerToken) {
@@ -73,6 +76,9 @@ export async function POST(request: Request) {
           operator: op,
           platform: pl,
         }),
+        endDate: endDate ? new Date(endDate) : null,
+        roiEstimate: roiEstimate || null,
+        bepEstimate: bepEstimate || null,
       },
       include: {
         brand: { select: { name: true } },

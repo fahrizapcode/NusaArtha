@@ -189,7 +189,7 @@ export default function MonitoringPage() {
               const isGrowthPositive = growth >= 0;
 
               return (
-                <div key={outlet.id} className="p-5">
+                <div key={`${pool.poolId}-${outlet.id}`} className="p-5">
                   {/* Outlet header */}
                   <div className="flex items-start justify-between mb-4 gap-4">
                     <div>
@@ -260,7 +260,7 @@ export default function MonitoringPage() {
                   {outlet.performanceScore.notes.length > 0 && (
                     <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 space-y-1">
                       {outlet.performanceScore.notes.map((note, i) => (
-                        <div key={i} className="flex items-start gap-2 text-xs text-amber-800">
+                        <div key={`${outlet.id}-note-${i}`} className="flex items-start gap-2 text-xs text-amber-800">
                           <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
                           {note}
                         </div>
@@ -274,7 +274,7 @@ export default function MonitoringPage() {
                       <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Transaksi terakhir hari ini</p>
                       <div className="space-y-1.5">
                         {outlet.recentTransactions.map((tx, i) => (
-                          <div key={i} className="flex items-center justify-between text-xs bg-gray-50 rounded-lg px-3 py-2">
+                          <div key={`${tx.timestamp}-${i}`} className="flex items-center justify-between text-xs bg-gray-50 rounded-lg px-3 py-2">
                             <span className="text-gray-500">
                               {new Date(tx.timestamp).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}
                             </span>
