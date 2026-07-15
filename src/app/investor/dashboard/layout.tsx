@@ -12,6 +12,7 @@ import {
   Vote,
   BadgeCheck,
   Wallet,
+  Activity,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -21,6 +22,7 @@ import { WalletButton } from "@/components/ui/wallet-button";
 const MENUS = [
   { label: "Marketplace", icon: Store, href: "/investor/dashboard/marketplace" },
   { label: "Portfolio", icon: Briefcase, href: "/investor/dashboard/portfolio" },
+  { label: "Monitoring", icon: Activity, href: "/investor/dashboard/monitoring" },
   { label: "Revenue sharing", icon: LineChart, href: "/investor/dashboard/revenue" },
   { label: "Governance", icon: Vote, href: "/investor/dashboard/governance" },
   { label: "Pengaturan", icon: Settings, href: "/investor/dashboard/settings" },

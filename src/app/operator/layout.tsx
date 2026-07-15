@@ -2,7 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import {
-  LayoutDashboard, Store, LineChart, Settings, Bell, LogOut,
+  LayoutDashboard, Store, LineChart, Settings, Bell, LogOut, Award,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -11,6 +11,7 @@ const MENUS = [
   { label: "Dashboard", icon: LayoutDashboard, href: "/operator" },
   { label: "Outlet Saya", icon: Store, href: "/operator/outlet" },
   { label: "Transaksi POS", icon: LineChart, href: "/operator/pos" },
+  { label: "Performa Saya", icon: Award, href: "/operator/performance" },
   { label: "Pengaturan", icon: Settings, href: "/operator/settings" },
 ];
 
