@@ -16,6 +16,9 @@ export const NETWORK_PASSPHRASE =
 export const FACTORY_CONTRACT_ID =
   process.env.NEXT_PUBLIC_FACTORY_CONTRACT_ID || "";
 
+export const BRAND_REGISTRY_CONTRACT_ID =
+  process.env.NEXT_PUBLIC_BRAND_REGISTRY_CONTRACT_ID || "";
+
 export const GOVERNANCE_CONTRACT_ID =
   process.env.NEXT_PUBLIC_GOVERNANCE_CONTRACT_ID || "";
 

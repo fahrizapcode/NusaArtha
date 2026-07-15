@@ -16,7 +16,8 @@ import {
 import { useState, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { useStellarWallet } from "@/lib/stellar/context";
-import { castVoteOnStellar, hasVotedOnChain } from "@/lib/stellar/governance";
+import { castVoteOnStellar, fetchProposalFromIPFS, hasVotedOnChain } from "@/lib/stellar/governance";
+import { getGovernanceProposals } from "@/lib/stellar/soroban";
 import { getTokenBalance, poolIdToAssetCode } from "@/lib/stellar/assets";
 import { getStellarExpertUrl } from "@/lib/stellar/network";
 
@@ -74,6 +75,116 @@ const MOCK_PROPOSALS: Proposal[] = [
   },
 ];
 
+const formatProposalDeadline = (votingEndTime: number | string | null): string => {
+  if (!votingEndTime) return "-";
+  let timestamp = Number(votingEndTime);
+  if (Number.isNaN(timestamp)) return String(votingEndTime);
+  if (timestamp < 1_000_000_000_000) {
+    timestamp = timestamp * 1000;
+  }
+  return new Date(timestamp).toLocaleDateString("id-ID", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+};
+
+const normalizeProposalStatus = (
+  executed: boolean | null,
+  votingEndTime: number | string | null,
+): "active" | "ended" => {
+  if (executed) return "ended";
+  if (!votingEndTime) return "active";
+  let timestamp = Number(votingEndTime);
+  if (Number.isNaN(timestamp)) return "active";
+  if (timestamp < 1_000_000_000_000) {
+    timestamp = timestamp * 1000;
+  }
+  return timestamp < Date.now() ? "ended" : "active";
+};
+
+const parseProposalOption = (raw: any, index: number) => {
+  if (raw == null) {
+    return { id: index, label: `Pilihan ${index + 1}`, votes: 0 };
+  }
+  const id = Number(raw.id ?? raw[0] ?? index);
+  const label =
+    typeof raw === "string"
+      ? raw
+      : String(raw.description ?? raw.label ?? raw.text ?? raw[1] ?? `Pilihan ${index + 1}`);
+  const votes = Number(raw.voteCount ?? raw.votes ?? raw[2] ?? 0);
+  return { id: Number.isNaN(id) ? index : id, label, votes: Number.isNaN(votes) ? 0 : votes };
+};
+
+const parseProposalItem = async (raw: any, poolIdOverride?: string): Promise<Proposal | null> => {
+  if (!raw) return null;
+
+  const id = String(raw.id ?? raw[0] ?? "");
+  if (!id) return null;
+
+  const poolId = String(raw.poolId ?? raw[1] ?? poolIdOverride ?? "");
+  const title = String(raw.title ?? raw[2] ?? "Proposal governance");
+  const descriptionCID = String(raw.descriptionCID ?? raw[3] ?? "");
+  const votingEndTime = raw.votingEndTime ?? raw[4] ?? null;
+  const executed = Boolean(raw.executed ?? raw[5] ?? false);
+  const winningOptionId = raw.winningOptionId ?? raw[6] ?? null;
+
+  let options: Proposal["options"] = [];
+  const rawOptions = raw.options ?? raw.proposalOptions ?? raw[7] ?? [];
+  if (Array.isArray(rawOptions)) {
+    options = rawOptions.map(parseProposalOption);
+  }
+
+  if (options.length === 0) {
+    options = [
+      { id: 0, label: "Setuju", votes: 0 },
+      { id: 1, label: "Tidak Setuju", votes: 0 },
+    ];
+  }
+
+  const proposal: Proposal = {
+    id,
+    poolId,
+    title,
+    description: "",
+    options,
+    deadline: formatProposalDeadline(votingEndTime),
+    status: normalizeProposalStatus(executed, votingEndTime),
+    totalVoters: options.reduce((sum, option) => sum + option.votes, 0),
+    participation: 0,
+    myVote: null,
+    descriptionCID: descriptionCID || undefined,
+    winningOptionId: typeof winningOptionId === "number" ? winningOptionId : null,
+  } as Proposal;
+
+  if (descriptionCID) {
+    const metadata = await fetchProposalFromIPFS(descriptionCID);
+    if (metadata) {
+      proposal.title = String(metadata.title ?? proposal.title);
+      proposal.description = String(metadata.description ?? proposal.description ?? "");
+      const optionData = metadata.options ?? metadata.optionDescriptions;
+      if (Array.isArray(optionData) && optionData.length > 0) {
+        proposal.options = optionData.map((rawOption: any, idx: number) => {
+          const option = parseProposalOption(rawOption, idx);
+          const existing = proposal.options.find((o) => o.id === option.id || o.label === option.label);
+          return {
+            ...option,
+            votes: existing?.votes ?? option.votes,
+          };
+        });
+      }
+      if (typeof metadata.participation === "number") {
+        proposal.participation = metadata.participation;
+      }
+      if (typeof metadata.totalVotes === "number") {
+        proposal.totalVoters = metadata.totalVotes;
+      }
+    }
+  }
+
+  return proposal;
+};
+
 export default function GovernancePage() {
   const { isConnected, publicKey, networkPassphrase, poolBalances } =
     useStellarWallet();
@@ -85,6 +196,8 @@ export default function GovernancePage() {
   const [loadingVoteCheck, setLoadingVoteCheck] = useState<
     Record<string, boolean>
   >({});
+  const [loadingProposals, setLoadingProposals] = useState(false);
+  const [proposalError, setProposalError] = useState<string>("");
 
   const resolveTokenBalance = useCallback(
     async (poolId: string) => {
@@ -104,6 +217,67 @@ export default function GovernancePage() {
     },
     [publicKey, poolBalances],
   );
+
+  // Load governance proposals from Soroban contract and IPFS metadata
+  useEffect(() => {
+    if (!publicKey) return;
+
+    let cancelled = false;
+
+    const loadProposals = async () => {
+      setLoadingProposals(true);
+      setProposalError("");
+
+      try {
+        const apiRes = await fetch("/api/pools");
+        if (!apiRes.ok) {
+          throw new Error("Gagal memuat daftar pool");
+        }
+        const data = await apiRes.json();
+        const pools = Array.isArray(data.pools) ? data.pools : [];
+
+        const rawProposalGroups = await Promise.all(
+          pools.map(async (pool: any) => {
+            const proposals = await getGovernanceProposals(pool.id, publicKey);
+            return Array.isArray(proposals)
+              ? proposals.map((item) => ({ poolId: pool.id, item }))
+              : [];
+          }),
+        );
+
+        const rawProposals = rawProposalGroups.flat();
+        if (rawProposals.length === 0) {
+          return;
+        }
+
+        const enriched = await Promise.all(
+          rawProposals.map(async ({ poolId, item }) => {
+            const proposal = await parseProposalItem(item, poolId);
+            return proposal;
+          }),
+        );
+
+        const validProposals = enriched.filter((p): p is Proposal => p !== null);
+        if (!cancelled && validProposals.length > 0) {
+          setProposals(validProposals);
+        }
+      } catch (err: any) {
+        if (!cancelled) {
+          setProposalError(err?.message || "Gagal memuat proposal governance");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingProposals(false);
+        }
+      }
+    };
+
+    void loadProposals();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [publicKey]);
 
   // Check on-chain vote status when wallet connects
   useEffect(() => {

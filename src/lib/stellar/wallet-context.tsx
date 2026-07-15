@@ -11,7 +11,7 @@ import {
   signTransactionWithFreighter,
 } from "./freighter";
 import { getAccountBalances, fundTestnetAccount } from "./horizon";
-import { STELLAR_NETWORK, FREIGHTER_DOWNLOAD_URL } from "./config";
+import { STELLAR_NETWORK } from "./config";
 
 type WalletState = {
   publicKey: string | null;
@@ -39,10 +39,11 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
 
   // Check on mount
   useEffect(() => {
-    const installed = isFreighterInstalled();
-    setIsInstalled(installed);
-    if (installed) {
-      isFreighterConnected().then(async (connected) => {
+    void (async () => {
+      const installed = isFreighterInstalled();
+      setIsInstalled(installed);
+      if (installed) {
+        const connected = await isFreighterConnected();
         if (connected) {
           const pk = await getFreighterPublicKey();
           if (pk) {
@@ -51,20 +52,22 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
             setNetwork(STELLAR_NETWORK);
           }
         }
-      });
-    }
+      }
+    })();
   }, []);
 
   // Refresh balances whenever publicKey changes
-  useEffect(() => {
-    if (publicKey) refreshBalances();
-  }, [publicKey]);
-
   const refreshBalances = useCallback(async () => {
     if (!publicKey) return;
     const bal = await getAccountBalances(publicKey);
     setBalances(bal);
   }, [publicKey]);
+
+  useEffect(() => {
+    void (async () => {
+      if (publicKey) await refreshBalances();
+    })();
+  }, [publicKey, refreshBalances]);
 
   const connect = useCallback(async (): Promise<boolean> => {
     setIsLoading(true);

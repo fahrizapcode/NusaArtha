@@ -105,9 +105,11 @@ export function StellarWalletProvider({ children }: { children: ReactNode }) {
   }, [publicKey]);
 
   useEffect(() => {
-    if (isConnected && publicKey) {
-      refreshBalances();
-    }
+    void (async () => {
+      if (isConnected && publicKey) {
+        await refreshBalances();
+      }
+    })();
   }, [isConnected, publicKey, refreshBalances]);
 
   const connect = useCallback(async () => {
@@ -120,8 +122,9 @@ export function StellarWalletProvider({ children }: { children: ReactNode }) {
         setNetworkPassphrase(conn.networkPassphrase);
         setIsConnected(true);
       }
-    } catch (err: any) {
-      alert(err.message || "Gagal terhubung ke Freighter");
+    } catch (err: unknown) {
+      const e = err as { message?: string };
+      alert(e.message || "Gagal terhubung ke Freighter");
     } finally {
       setIsConnecting(false);
     }

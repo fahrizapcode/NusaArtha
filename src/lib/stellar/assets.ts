@@ -11,13 +11,22 @@ export type PoolAsset = {
   issuer: string;
 };
 
+// Convenience alias for the SDK balance union type
+type BalanceLine = StellarSdk.Horizon.HorizonApi.BalanceLine;
+type BalanceLineAsset = StellarSdk.Horizon.HorizonApi.BalanceLineAsset;
+
+function isNonNativeBalance(b: BalanceLine): b is BalanceLineAsset {
+  return b.asset_type !== "native" && b.asset_type !== "liquidity_pool_shares";
+}
+
 function normalizeAssetCode(value: string): string {
   return value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
 }
 
-function matchesPoolAsset(balance: any, poolId: string): boolean {
+function matchesPoolAsset(balance: BalanceLine, poolId: string): boolean {
+  if (!isNonNativeBalance(balance)) return false;
   const expectedCode = normalizeAssetCode(poolIdToAssetCode(poolId));
-  const actualCode = normalizeAssetCode(balance?.asset_code || "");
+  const actualCode = normalizeAssetCode(balance.asset_code || "");
   if (!expectedCode || !actualCode) return false;
   return (
     actualCode === expectedCode ||
@@ -66,7 +75,6 @@ export async function establishTrustline(
   networkPassphrase?: string | null,
 ): Promise<{ txHash: string; success: boolean; error?: string }> {
   try {
-    // Fallback ke config jika networkPassphrase tidak disediakan
     const { networkPassphrase: configPassphrase } = getStellarConfig();
     const passphrase = networkPassphrase || configPassphrase;
 
@@ -117,12 +125,13 @@ export async function establishTrustline(
         passphrase,
       ) as StellarSdk.Transaction,
     );
-    return { txHash: (result as any).hash, success: true };
-  } catch (err: any) {
-    const resultCodes = err?.response?.data?.extras?.result_codes;
+    return { txHash: (result as { hash: string }).hash, success: true };
+  } catch (err: unknown) {
+    const e = err as { response?: { data?: { extras?: { result_codes?: unknown } } }; message?: string };
+    const resultCodes = e?.response?.data?.extras?.result_codes;
     const detail = resultCodes
       ? JSON.stringify(resultCodes)
-      : err?.message || String(err);
+      : e?.message || String(err);
     console.error("[Stellar] establishTrustline error:", detail);
     return { txHash: "", success: false, error: detail };
   }
@@ -138,9 +147,7 @@ export async function hasTrustline(
   try {
     const server = getHorizonServer();
     const account = await server.loadAccount(publicKey);
-    return account.balances.some(
-      (b: any) => b.asset_type !== "native" && matchesPoolAsset(b, poolId),
-    );
+    return account.balances.some((b) => matchesPoolAsset(b, poolId));
   } catch {
     return false;
   }
@@ -156,12 +163,10 @@ export async function getTokenBalance(
   try {
     const server = getHorizonServer();
     const account = await server.loadAccount(publicKey);
-    const matches = account.balances.filter(
-      (b: any) => b.asset_type !== "native" && matchesPoolAsset(b, poolId),
-    );
+    const matches = account.balances.filter((b) => matchesPoolAsset(b, poolId));
     if (matches.length === 0) return 0;
     return matches.reduce(
-      (total, b: any) => total + parseFloat(b.balance || "0"),
+      (total, b) => total + parseFloat(b.balance || "0"),
       0,
     );
   } catch {
@@ -176,8 +181,8 @@ export async function getNativeBalance(publicKey: string): Promise<number> {
   try {
     const server = getHorizonServer();
     const account = await server.loadAccount(publicKey);
-    const native = account.balances.find((b: any) => b.asset_type === "native");
-    return native ? parseFloat((native as any).balance) : 0;
+    const native = account.balances.find((b) => b.asset_type === "native");
+    return native ? parseFloat(native.balance) : 0;
   } catch {
     return 0;
   }
@@ -193,8 +198,8 @@ export async function getAllPoolBalances(
     const server = getHorizonServer();
     const account = await server.loadAccount(publicKey);
     return account.balances
-      .filter((b: any) => b.asset_type !== "native")
-      .map((b: any) => ({
+      .filter(isNonNativeBalance)
+      .map((b) => ({
         assetCode: b.asset_code,
         issuer: b.asset_issuer,
         balance: parseFloat(b.balance),

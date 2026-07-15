@@ -7,4 +7,6 @@ export * from "./assets";
 export * from "./transactions";
 export * from "./governance";
 export * from "./audit";
+export * from "./soroban";
+export * from "./hooks";
 export { StellarWalletProvider, useStellarWallet } from "./context";

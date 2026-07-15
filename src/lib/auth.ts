@@ -2,7 +2,7 @@ import { jwtVerify, SignJWT } from 'jose';
 
 const JWT_SECRET_KEY = process.env.JWT_SECRET_KEY || 'default_secret_key_change_me_in_production';
 
-export async function signJwt(payload: any) {
+export async function signJwt(payload: Record<string, unknown>) {
   const secret = new TextEncoder().encode(JWT_SECRET_KEY);
   const alg = 'HS256';
 
@@ -18,7 +18,7 @@ export async function verifyJwt(token: string) {
     const secret = new TextEncoder().encode(JWT_SECRET_KEY);
     const { payload } = await jwtVerify(token, secret);
     return payload;
-  } catch (error) {
+  } catch {
     return null;
   }
 }

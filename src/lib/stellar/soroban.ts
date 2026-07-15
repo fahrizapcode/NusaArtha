@@ -4,6 +4,7 @@
 import * as StellarSdk from "@stellar/stellar-sdk";
 import { getStellarConfig, getHorizonServer } from "./network";
 
+const BRAND_REGISTRY_CONTRACT_ID = process.env.NEXT_PUBLIC_BRAND_REGISTRY_CONTRACT_ID || "";
 const FACTORY_CONTRACT_ID = process.env.NEXT_PUBLIC_FACTORY_CONTRACT_ID || "";
 const GOVERNANCE_CONTRACT_ID = process.env.NEXT_PUBLIC_GOVERNANCE_CONTRACT_ID || "";
 const AUDIT_CONTRACT_ID = process.env.NEXT_PUBLIC_AUDIT_CONTRACT_ID || "";
@@ -276,4 +277,171 @@ export async function getPoolInfo(
   } catch {
     return null;
   }
+}
+
+// ─── Brand Registry contract calls ───────────────────────────────────────────
+
+export type SorobanBrand = {
+  owner: string;
+  name: string;
+  businessType: string;
+  timestamp: number;
+  status: string;
+  readinessScore: number;
+  riskLevel: string;
+  verified: boolean;
+  approvedAt: number;
+};
+
+function parseBrandFromScVal(scVal: StellarSdk.xdr.ScVal): SorobanBrand | null {
+  try {
+    const map = scVal.map();
+    if (!map) return null;
+
+    let owner = "", name = "", businessType = "", status = "Pending";
+    let timestamp = 0, readinessScore = 0, approvedAt = 0;
+    let riskLevel = "PENDING", verified = false;
+
+    for (const entry of map) {
+      const key = entry.key().sym()?.toString();
+      const val = entry.val();
+      if (key === "owner") owner = StellarSdk.Address.fromScVal(val).toString();
+      if (key === "name") name = StellarSdk.scValToNative(val) as string;
+      if (key === "business_type") businessType = StellarSdk.scValToNative(val) as string;
+      if (key === "timestamp") timestamp = Number(StellarSdk.scValToNative(val));
+      if (key === "status") status = StellarSdk.scValToNative(val) as string;
+      if (key === "readiness_score") readinessScore = Number(StellarSdk.scValToNative(val));
+      if (key === "risk_level") riskLevel = StellarSdk.scValToNative(val) as string;
+      if (key === "verified") verified = StellarSdk.scValToNative(val) as boolean;
+      if (key === "approved_at") approvedAt = Number(StellarSdk.scValToNative(val));
+    }
+    return { owner, name, businessType, timestamp, status, readinessScore, riskLevel, verified, approvedAt };
+  } catch {
+    return null;
+  }
+}
+
+/** Fetch all brands from the BrandRegistry Soroban contract */
+export async function fetchAllBrandsFromContract(
+  callerPublicKey: string
+): Promise<SorobanBrand[]> {
+  if (!BRAND_REGISTRY_CONTRACT_ID) return [];
+  try {
+    const result = await simulateContractCall(
+      BRAND_REGISTRY_CONTRACT_ID,
+      "get_all_brands",
+      [],
+      callerPublicKey
+    );
+    if (!result) return [];
+    const vec = result.vec();
+    if (!vec) return [];
+    return vec.map(parseBrandFromScVal).filter(Boolean) as SorobanBrand[];
+  } catch {
+    return [];
+  }
+}
+
+/** Build XDR to register a brand on-chain */
+export async function buildRegisterBrandXdr(
+  ownerPublicKey: string,
+  brandName: string,
+  businessType: string
+): Promise<string | null> {
+  if (!BRAND_REGISTRY_CONTRACT_ID) return null;
+  return buildContractTxXdr(
+    BRAND_REGISTRY_CONTRACT_ID,
+    "register_brand",
+    [
+      scAddress(ownerPublicKey),
+      scString(brandName),
+      scString(businessType),
+    ],
+    ownerPublicKey
+  );
+}
+
+/** Build XDR for admin to approve a brand */
+export async function buildApproveBrandXdr(
+  adminPublicKey: string,
+  ownerPublicKey: string,
+  brandName: string,
+  readinessScore: number,
+  riskLevel: string
+): Promise<string | null> {
+  if (!BRAND_REGISTRY_CONTRACT_ID) return null;
+  return buildContractTxXdr(
+    BRAND_REGISTRY_CONTRACT_ID,
+    "approve_brand",
+    [
+      scAddress(adminPublicKey),
+      scAddress(ownerPublicKey),
+      scString(brandName),
+      scU32(readinessScore),
+      scString(riskLevel),
+    ],
+    adminPublicKey
+  );
+}
+
+/** Build XDR for admin to reject a brand */
+export async function buildRejectBrandXdr(
+  adminPublicKey: string,
+  ownerPublicKey: string,
+  brandName: string
+): Promise<string | null> {
+  if (!BRAND_REGISTRY_CONTRACT_ID) return null;
+  return buildContractTxXdr(
+    BRAND_REGISTRY_CONTRACT_ID,
+    "reject_brand",
+    [
+      scAddress(adminPublicKey),
+      scAddress(ownerPublicKey),
+      scString(brandName),
+    ],
+    adminPublicKey
+  );
+}
+
+/** Build XDR to record an investment on the InvestmentPool contract */
+export async function buildRecordInvestmentXdr(
+  investorPublicKey: string,
+  poolId: string,
+  tokensBought: bigint,
+  txHash: string
+): Promise<string | null> {
+  if (!FACTORY_CONTRACT_ID) return null;
+  return buildContractTxXdr(
+    FACTORY_CONTRACT_ID,
+    "record_investment",
+    [
+      scAddress(investorPublicKey),
+      scString(poolId),
+      scI128(tokensBought),
+      scString(txHash),
+    ],
+    investorPublicKey
+  );
+}
+
+/** Build XDR to log an audit event on the AuditTrail contract */
+export async function buildLogAuditEventXdr(
+  recorderPublicKey: string,
+  poolId: string,
+  eventTypeVariant: number,
+  dataCid: string
+): Promise<string | null> {
+  if (!AUDIT_CONTRACT_ID) return null;
+  // event_type is an enum, pass as u32 index
+  return buildContractTxXdr(
+    AUDIT_CONTRACT_ID,
+    "log_event",
+    [
+      scAddress(recorderPublicKey),
+      scString(poolId),
+      scU32(eventTypeVariant),
+      scString(dataCid),
+    ],
+    recorderPublicKey
+  );
 }

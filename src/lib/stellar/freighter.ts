@@ -3,7 +3,7 @@
 // Freighter wallet integration (browser extension for Stellar)
 // Freighter injects window.freighter
 
-import { NETWORK_PASSPHRASE, STELLAR_NETWORK, FREIGHTER_DOWNLOAD_URL } from "./config";
+import { NETWORK_PASSPHRASE, FREIGHTER_DOWNLOAD_URL } from "./config";
 
 declare global {
   interface Window {

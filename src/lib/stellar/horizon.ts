@@ -15,8 +15,8 @@ export async function getAccountInfo(publicKey: string) {
   try {
     const server = getServer();
     return await server.loadAccount(publicKey);
-  } catch (err: any) {
-    if (err.response?.status === 404) return null; // account not funded
+  } catch (err: unknown) {
+    if ((err as { response?: { status?: number } }).response?.status === 404) return null; // account not funded
     throw err;
   }
 }
@@ -30,11 +30,11 @@ export async function getAccountBalances(
   try {
     const account = await getAccountInfo(publicKey);
     if (!account) return [];
-    return account.balances.map((b: any) => ({
-      asset: b.asset_type === "native" ? "XLM" : `${b.asset_code}:${b.asset_issuer}`,
+    return account.balances.map((b) => ({
+      asset: b.asset_type === "native" ? "XLM" : `${(b as StellarSdk.Horizon.HorizonApi.BalanceLineAsset).asset_code}:${(b as StellarSdk.Horizon.HorizonApi.BalanceLineAsset).asset_issuer}`,
       balance: b.balance,
-      assetCode: b.asset_code,
-      assetIssuer: b.asset_issuer,
+      assetCode: b.asset_type !== "native" ? (b as StellarSdk.Horizon.HorizonApi.BalanceLineAsset).asset_code : undefined,
+      assetIssuer: b.asset_type !== "native" ? (b as StellarSdk.Horizon.HorizonApi.BalanceLineAsset).asset_issuer : undefined,
     }));
   } catch {
     return [];
