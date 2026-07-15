@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
@@ -26,9 +27,37 @@ const MENUS = [
   { label: "Pengaturan", icon: Settings, href: "/admin/settings" },
 ];
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+export default function AdminLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const pathname = usePathname();
   const router = useRouter();
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((res) => {
+        if (!res.ok) {
+          router.push("/login");
+          return null;
+        }
+        return res.json();
+      })
+      .then((data) => {
+        if (!data?.user) return;
+        const role = data.user.role;
+        // Redirect non-ADMIN users to their correct dashboard
+        if (role === "BRAND_OWNER") {
+          router.push("/dashboard");
+        } else if (role === "INVESTOR") {
+          router.push("/investor/dashboard/marketplace");
+        } else if (role === "OPERATOR") {
+          router.push("/operator");
+        }
+      })
+      .catch(() => {});
+  }, [router]);
 
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -46,7 +75,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <aside className="w-60 bg-white border-r border-gray-100 flex-col hidden md:flex fixed inset-y-0 z-30">
         <div className="h-16 flex items-center px-5 border-b border-gray-100 justify-between">
           <div className="w-32 h-7 relative">
-            <Image src="/logo.svg" alt="NusaArtha" fill className="object-contain object-left" />
+            <Image
+              src="/logo.svg"
+              alt="NusaArtha"
+              fill
+              className="object-contain object-left"
+            />
           </div>
           <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest bg-gray-50 px-2 py-1 rounded border border-gray-100">
             Admin
@@ -62,10 +96,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group relative",
                 isActive(menu.href)
                   ? "bg-gray-900 text-white"
-                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900",
               )}
             >
-              <menu.icon className={cn("w-4 h-4", isActive(menu.href) ? "text-white" : "text-gray-400 group-hover:text-gray-600")} />
+              <menu.icon
+                className={cn(
+                  "w-4 h-4",
+                  isActive(menu.href)
+                    ? "text-white"
+                    : "text-gray-400 group-hover:text-gray-600",
+                )}
+              />
               {menu.label}
             </Link>
           ))}
@@ -77,11 +118,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               SA
             </div>
             <div className="overflow-hidden">
-              <p className="text-sm font-semibold text-gray-900 truncate leading-tight">Super Admin</p>
-              <p className="text-xs text-gray-400 truncate">admin@nusaartha.id</p>
+              <p className="text-sm font-semibold text-gray-900 truncate leading-tight">
+                Super Admin
+              </p>
+              <p className="text-xs text-gray-400 truncate">
+                admin@nusaartha.id
+              </p>
             </div>
           </div>
-          <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-gray-500 hover:text-red-600 hover:bg-red-50 transition-colors group">
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-gray-500 hover:text-red-600 hover:bg-red-50 transition-colors group"
+          >
             <LogOut className="w-4 h-4 text-gray-400 group-hover:text-red-500" />
             Keluar
           </button>
@@ -96,7 +144,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             {MENUS.find((m) => isActive(m.href))?.label ?? "Admin"}
           </p>
           <div className="flex items-center gap-3">
-            <button onClick={() => alert('Fitur notifikasi akan segera hadir')} className="relative p-2 text-gray-400 hover:text-gray-700 transition-colors">
+            <button
+              onClick={() => alert("Fitur notifikasi akan segera hadir")}
+              className="relative p-2 text-gray-400 hover:text-gray-700 transition-colors"
+            >
               <Bell className="w-5 h-5" />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
             </button>
@@ -106,9 +157,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
         </header>
 
-        <main className="flex-1 p-6">
-          {children}
-        </main>
+        <main className="flex-1 p-6">{children}</main>
       </div>
     </div>
   );

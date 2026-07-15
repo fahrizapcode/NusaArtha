@@ -53,6 +53,21 @@ export async function POST(
       },
     });
 
+    // Auto-create outlet for this pool if none exists yet
+    const existingOutlet = await prisma.outlet.findFirst({
+      where: { poolId: id },
+    });
+    if (!existingOutlet) {
+      await prisma.outlet.create({
+        data: {
+          poolId: id,
+          name: pool.name,
+          location: pool.location,
+          status: "PENDING",
+        },
+      });
+    }
+
     // Record audit trail on Stellar (fire-and-forget)
     recordAuditEvent("POOL_PUBLISHED", id, disclosureData).catch(console.error);
 

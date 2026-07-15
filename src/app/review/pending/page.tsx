@@ -1,11 +1,27 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, CircleDashed, Clock, ArrowRight } from "lucide-react";
+import { CheckCircle2, CircleDashed, Clock, ArrowRight, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 export default function ReviewPendingPage() {
   const router = useRouter();
+  const [dashboardPath, setDashboardPath] = useState("/dashboard");
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => {
+        if (!data?.user) return;
+        const role = data.user.role;
+        if (role === "ADMIN") setDashboardPath("/admin");
+        else if (role === "INVESTOR") setDashboardPath("/investor/dashboard/marketplace");
+        else if (role === "OPERATOR") setDashboardPath("/operator");
+        else setDashboardPath("/dashboard");
+      })
+      .catch(() => {});
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 font-sans">
@@ -60,7 +76,7 @@ export default function ReviewPendingPage() {
         </div>
 
         <Button 
-          onClick={() => router.push("/dashboard?status=pending")}
+          onClick={() => router.push(dashboardPath)}
           className="bg-gray-900 hover:bg-gray-800 text-white font-medium gap-2"
         >
           Kembali ke Dashboard <ArrowRight className="w-4 h-4" />

@@ -31,6 +31,8 @@ export default function RegisterBrandPage() {
     capitalPerOutlet: "",
     supplyChain: "",
     qualityStandard: "",
+    legalDocsCID: "",
+    sopDocsCID: "",
   });
 
   const updateForm = (key: string, value: string) => {
@@ -263,12 +265,27 @@ function StepTwo({ formData, updateForm }: any) {
           <div className="grid gap-2">
             <Label>Bukti Kepemilikan Brand (Opsional)</Label>
             <p className="text-xs text-gray-500">Opsional. Dapat berupa sertifikat merek atau dokumen pendukung lainnya.</p>
-            <div className="border-2 border-dashed border-gray-200 rounded-xl p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-gray-50 hover:border-gray-300 transition-all group">
-              <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mb-3 group-hover:bg-white transition-colors">
-                <UploadCloud className="w-6 h-6 text-gray-400" />
-              </div>
-              <p className="text-sm font-medium text-gray-900">Klik untuk upload atau drag & drop</p>
-              <p className="text-xs text-gray-500 mt-1">Support: PDF, PNG, JPG (Max. 10MB)</p>
+            <div className="relative border-2 border-dashed border-gray-200 rounded-xl p-8 flex flex-col items-center justify-center text-center hover:bg-gray-50 hover:border-gray-300 transition-all group overflow-hidden">
+              <input type="file" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept=".pdf,.png,.jpg,.jpeg" onChange={(e) => {
+                if (e.target.files && e.target.files.length > 0) updateForm("legalDocsCID", e.target.files[0].name);
+              }} />
+              {formData.legalDocsCID ? (
+                <>
+                  <div className="w-12 h-12 bg-green-50 rounded-full flex items-center justify-center mb-3">
+                    <Check className="w-6 h-6 text-green-500" />
+                  </div>
+                  <p className="text-sm font-medium text-gray-900">{formData.legalDocsCID}</p>
+                  <p className="text-xs text-green-600 mt-1">Berhasil dipilih</p>
+                </>
+              ) : (
+                <>
+                  <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mb-3 group-hover:bg-white transition-colors">
+                    <UploadCloud className="w-6 h-6 text-gray-400" />
+                  </div>
+                  <p className="text-sm font-medium text-gray-900">Klik untuk upload atau drag & drop</p>
+                  <p className="text-xs text-gray-500 mt-1">Support: PDF, PNG, JPG (Max. 10MB)</p>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -310,10 +327,25 @@ function StepTwo({ formData, updateForm }: any) {
           {formData.hasSOP === "Ya" && (
             <div className="grid gap-2 animate-in fade-in slide-in-from-top-2 duration-300">
               <Label>Upload SOP</Label>
-              <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-gray-50 hover:border-gray-300 transition-all group">
-                <UploadCloud className="w-5 h-5 text-gray-400 mb-2" />
-                <p className="text-sm font-medium text-gray-900">Upload Dokumen SOP</p>
-                <p className="text-xs text-gray-500 mt-1">PDF atau DOCX (Max. 10MB)</p>
+              <div className="relative border-2 border-dashed border-gray-200 rounded-xl p-6 flex flex-col items-center justify-center text-center hover:bg-gray-50 hover:border-gray-300 transition-all group overflow-hidden">
+                <input type="file" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept=".pdf,.doc,.docx" onChange={(e) => {
+                  if (e.target.files && e.target.files.length > 0) updateForm("sopDocsCID", e.target.files[0].name);
+                }} />
+                {formData.sopDocsCID ? (
+                  <>
+                    <div className="w-10 h-10 bg-green-50 rounded-full flex items-center justify-center mb-2">
+                      <Check className="w-5 h-5 text-green-500" />
+                    </div>
+                    <p className="text-sm font-medium text-gray-900">{formData.sopDocsCID}</p>
+                    <p className="text-xs text-green-600 mt-1">Berhasil dipilih</p>
+                  </>
+                ) : (
+                  <>
+                    <UploadCloud className="w-5 h-5 text-gray-400 mb-2" />
+                    <p className="text-sm font-medium text-gray-900">Upload Dokumen SOP</p>
+                    <p className="text-xs text-gray-500 mt-1">PDF atau DOCX (Max. 10MB)</p>
+                  </>
+                )}
               </div>
             </div>
           )}

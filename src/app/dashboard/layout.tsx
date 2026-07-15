@@ -33,17 +33,34 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     fetch("/api/auth/me")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.user) {
-          const role = data.user.role === "BRAND_OWNER" ? "Brand Owner" 
-            : data.user.role === "OPERATOR" ? "Operator" 
-            : data.user.role;
-          setUserRole(role);
+      .then((res) => {
+        if (!res.ok) {
+          router.push("/login");
+          return null;
         }
+        return res.json();
+      })
+      .then((data) => {
+        if (!data || !data.user) return;
+        const userRoleRaw = data.user.role;
+        // Redirect non-BRAND_OWNER users to their correct dashboard
+        if (userRoleRaw === "ADMIN") {
+          router.push("/admin");
+          return;
+        }
+        if (userRoleRaw === "INVESTOR") {
+          router.push("/investor/dashboard/marketplace");
+          return;
+        }
+        if (userRoleRaw === "OPERATOR") {
+          router.push("/operator");
+          return;
+        }
+        const role = userRoleRaw === "BRAND_OWNER" ? "Brand Owner" : userRoleRaw;
+        setUserRole(role);
       })
       .catch(() => {});
-  }, []);
+  }, [router]);
 
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
