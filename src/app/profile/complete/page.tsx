@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Check, ArrowLeft, ArrowRight, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { Check, ArrowLeft, ArrowRight, Loader2, CheckCircle2, AlertCircle, Upload, FileCheck } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const MODULES = [
@@ -55,6 +55,8 @@ export default function CompleteProfilePage() {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
   const [brandName, setBrandName] = useState("");
+  const [legalDocsCID, setLegalDocsCID] = useState<string | null>(null);
+  const [sopDocsCID, setSopDocsCID] = useState<string | null>(null);
 
   // Load existing profile on mount
   useEffect(() => {
@@ -63,6 +65,8 @@ export default function CompleteProfilePage() {
       .then((d) => {
         if (d.brand) {
           setBrandName(d.brand.name || "");
+          setLegalDocsCID(d.brand.legalDocsCID || null);
+          setSopDocsCID(d.brand.sopDocsCID || null);
           setForm({
             description: d.brand.description || "",
             vision: d.brand.vision || "",
@@ -208,10 +212,26 @@ export default function CompleteProfilePage() {
                     <Field label="Nomor Induk Berusaha (NIB)" value={form.nib} onChange={upd("nib")} placeholder="Masukkan NIB" />
                     <Field label="NPWP Usaha / Pribadi" value={form.npwp} onChange={upd("npwp")} placeholder="Masukkan NPWP" />
                   </div>
-                  <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 text-sm text-amber-800">
-                    <p className="font-semibold mb-1">Upload Dokumen Fisik</p>
-                    <p className="text-xs">Dokumen (NIB, NPWP, identitas pemilik, sertifikat merek) dapat dikirimkan via email ke <strong>verify@nusaartha.id</strong> atau melalui WhatsApp tim verifikasi. Fitur upload langsung akan segera tersedia.</p>
-                  </div>
+
+                  {/* Upload Dokumen Legalitas */}
+                  <FileUploadField
+                    label="Dokumen Legalitas (NIB/NPWP/KTP Pemilik)"
+                    fieldName="legalDocsCID"
+                    accept=".pdf,.jpg,.jpeg,.png,.docx"
+                    hint="Format: PDF, JPG, PNG, atau DOCX. Maksimal 10MB."
+                    existingCid={legalDocsCID}
+                    onUploaded={(cid) => setLegalDocsCID(cid)}
+                  />
+
+                  {/* Upload SOP */}
+                  <FileUploadField
+                    label="SOP Operasional / Dokumen Pendukung"
+                    fieldName="sopDocsCID"
+                    accept=".pdf,.jpg,.jpeg,.png,.docx"
+                    hint="Dokumen SOP, sertifikat merek, atau dokumen pendukung lainnya."
+                    existingCid={sopDocsCID}
+                    onUploaded={(cid) => setSopDocsCID(cid)}
+                  />
                 </div>
               )}
 
@@ -301,3 +321,116 @@ function Field({ label, type = "text", value, onChange, placeholder }: {
     </div>
   );
 }
+
+// ─── File Upload Component ──────────────────────────────────────────────────
+
+function FileUploadField({
+  label,
+  fieldName,
+  accept,
+  hint,
+  existingCid,
+  onUploaded,
+}: {
+  label: string;
+  fieldName: string;
+  accept: string;
+  hint: string;
+  existingCid: string | null;
+  onUploaded: (cid: string) => void;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const [dragOver, setDragOver] = useState(false);
+  const [fileName, setFileName] = useState("");
+
+  const handleUpload = async (file: File) => {
+    setUploading(true);
+    setUploadError("");
+    setFileName(file.name);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("fieldName", fieldName);
+
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.error || "Upload gagal");
+
+      onUploaded(data.cid);
+    } catch (err: unknown) {
+      setUploadError(err instanceof Error ? err.message : "Upload gagal");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleUpload(file);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) handleUpload(file);
+  };
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label className="text-[13px] font-semibold text-gray-700">{label}</label>
+
+      {existingCid ? (
+        <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-xl">
+          <FileCheck className="w-5 h-5 text-green-600 flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm text-green-800 font-medium">Dokumen berhasil diunggah</p>
+            <p className="text-xs text-green-600 font-mono truncate">CID: {existingCid}</p>
+            {fileName && <p className="text-xs text-green-500 truncate">{fileName}</p>}
+          </div>
+          <label className="cursor-pointer text-xs text-green-700 bg-green-100 hover:bg-green-200 px-3 py-1.5 rounded-lg font-semibold transition-colors">
+            Ganti
+            <input type="file" accept={accept} onChange={handleFileChange} className="hidden" />
+          </label>
+        </div>
+      ) : (
+        <label
+          className={cn(
+            "flex flex-col items-center justify-center gap-2 p-6 border-2 border-dashed rounded-xl cursor-pointer transition-all",
+            dragOver ? "border-blue-500 bg-blue-50" : "border-gray-300 bg-gray-50 hover:border-blue-400 hover:bg-blue-50/50",
+            uploading && "pointer-events-none opacity-70"
+          )}
+          onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={handleDrop}
+        >
+          {uploading ? (
+            <>
+              <Loader2 className="w-6 h-6 text-blue-500 animate-spin" />
+              <span className="text-sm text-blue-600 font-medium">Mengunggah {fileName}...</span>
+            </>
+          ) : (
+            <>
+              <Upload className="w-6 h-6 text-gray-400" />
+              <span className="text-sm text-gray-600 font-medium">
+                Klik atau <span className="text-blue-600">seret file</span> ke sini
+              </span>
+              <span className="text-xs text-gray-400">{hint}</span>
+            </>
+          )}
+          <input type="file" accept={accept} onChange={handleFileChange} className="hidden" />
+        </label>
+      )}
+
+      {uploadError && (
+        <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg p-2">
+          <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" /> {uploadError}
+        </div>
+      )}
+    </div>
+  );
+}
+
